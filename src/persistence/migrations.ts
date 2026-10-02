@@ -29,4 +29,8 @@ export function migrate(state: Universe): void {
     state.relations = {}; state.megastructures = {}; state.resources.exotic = 0; state.resources.stellar = 0; state.resources.quantum = 0;
     for (const civ of Object.values(state.civilizations)) { civ.archetype = 'seekers'; civ.industry = 0; }
   }
+  if (state.version < 9) {
+    state.discoveries = {}; state.anomalies = {}; state.achievements = []; state.artifacts = [];
+    state.records = { peakPopulation: 0, mostAdvanced: 0, mostWorlds: 1, mostSpecies: 0, longestCivilization: 0 };
+  }
 }

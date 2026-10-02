@@ -45,6 +45,9 @@ export interface Civilization {
 export interface Relation { id: string; a: string; b: string; score: number; status: 'neutral' | 'trade' | 'alliance' | 'war'; lastUpdate: number }
 export type StructureType = 'habitat' | 'dyson' | 'wormhole' | 'black-hole-generator';
 export interface Megastructure { id: string; type: StructureType; civilizationId: string; systemId: string; startedAt: number; endsAt: number; status: 'building' | 'complete' }
+export interface Discovery { id: string; title: string; category: 'celestial' | 'biological' | 'civilization' | 'technology' | 'anomaly' | 'cosmic' | 'historical'; time: number; sourceId: string; detail: string; rarity: number }
+export interface Anomaly { id: string; seed: number; targetId: string; kind: 'ancient-ruins' | 'time-echo' | 'strange-signal' | 'artificial-moon'; stage: number; status: 'found' | 'investigating' | 'choice' | 'resolved'; choice: 'preserve' | 'decode' | null; nextAt: number | null }
+export interface Records { peakPopulation: number; mostAdvanced: number; mostWorlds: number; mostSpecies: number; longestCivilization: number }
 export interface Universe {
   version: number; seed: number; time: number; lastTimestamp: number; selectedId: string;
   resources: Resources; objects: Record<string, CelestialObject>; events: GameEvent[];
@@ -53,6 +56,7 @@ export interface Universe {
   systems: Record<string, StarSystem>;
   galaxies: Record<string, Galaxy>;
   relations: Record<string, Relation>; megastructures: Record<string, Megastructure>;
+  discoveries: Record<string, Discovery>; anomalies: Record<string, Anomaly>; achievements: string[]; artifacts: string[]; records: Records;
 }
 export interface ActionResult { ok: boolean; message: string }
 export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void }

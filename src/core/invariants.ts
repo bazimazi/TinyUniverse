@@ -28,6 +28,7 @@ export function assertUniverse(state: Universe): void {
   if (!state.galaxies || Object.values(state.galaxies).some(g => !finite(g.totalSystems, 1) || !finite(g.surveyed) || !finite(g.backgroundPopulation) || !finite(g.backgroundCivilizations))) throw new Error('Invalid galaxy aggregates.');
   if (!state.civilizations) throw new Error('Invalid civilizations.');
   if (!state.relations || !state.megastructures) throw new Error('Invalid advanced civilization state.');
+  if (!state.discoveries || !state.anomalies || !Array.isArray(state.achievements) || !Array.isArray(state.artifacts) || !state.records || Object.values(state.records).some(value => !finite(value))) throw new Error('Invalid discovery records.');
   if (!state.cooldowns || Object.values(state.cooldowns).some(value => !finite(value)) || ![1, 2, 5, 10, 25].includes(state.speed)) throw new Error('Invalid abilities or speed.');
   for (const civ of Object.values(state.civilizations)) {
     if (!state.objects[civ.planetId]?.planet || !finite(civ.population) || !finite(civ.foundedAt) || !finite(civ.level) || !finite(civ.researchPoints) || !Array.isArray(civ.technologies) || !Array.isArray(civ.timeline) || !['active', 'extinct'].includes(civ.status)) throw new Error('Invalid civilization.');

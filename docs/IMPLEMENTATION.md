@@ -60,4 +60,10 @@ Implemented four trait-derived archetypes, contact/trade/alliance/war decisions,
 
 Validation: autonomous contact/alliance behavior, construction gating/completion/production, headless regression checks, the large-universe benchmark and browser smoke tests.
 9. Discovery: rare events, ruins, codex and exploration chains.
+
+## Phase 9 — Anomalies and discovery
+
+Implemented deterministic rare signals, two-stage investigations with preserve/decode choices, ancient civilization records, artifacts, a permanent categorized codex, 120 milestone achievements and personal records. Investigations split simulation at exact completion deadlines and continue offline. Retained only bounded histories and cached the diplomacy count during pair processing.
+
+Validation: branching rewards, save roundtrips, deduplication, full regression tests, large-universe performance and desktop/mobile checks.
 10. Prestige: rebirth, knowledge, laws, modifiers and endless progression.

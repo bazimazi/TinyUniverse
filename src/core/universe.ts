@@ -33,6 +33,7 @@ export function createUniverse(seed = 1307, timestamp = Date.now()): Universe {
     systems: { 'system-0': { id: 'system-0', seed: entitySeed(seed, 'system-0'), name: 'Solace', starId: star.id, position: { x: 0, y: 0 }, galaxyId: 'galaxy-0' } },
     galaxies: { 'galaxy-0': initialGalaxy(seed, 'galaxy-0') },
     relations: {}, megastructures: {},
+    discoveries: {}, anomalies: {}, achievements: [], artifacts: [], records: { peakPopulation: 0, mostAdvanced: 0, mostWorlds: 1, mostSpecies: 0, longestCivilization: 0 },
     settings: { reducedMotion: false, highContrast: false, largeText: false, sound: false }
   };
 }

@@ -6,6 +6,7 @@ import type { ActionResult, ExploreKind, Universe } from '../core/types.ts';
 import { hasTechnology } from '../simulation/civilizations.ts';
 import { generateSystem } from './systems.ts';
 import { discoverGalaxy } from './galaxies.ts';
+import { findAnomaly } from './discoveries.ts';
 export function startExploration(state: Universe, kind: ExploreKind = 'orbital'): ActionResult {
   if (state.totalUpgrades < BALANCE.exploration.unlockUpgrades) return { ok: false, message: 'Build two planet upgrades to unlock orbital exploration.' };
   if (state.exploration.job) return { ok: false, message: 'An expedition is already underway.' };
@@ -27,7 +28,7 @@ export function completeExploration(state: Universe): void {
     const galaxyId = state.systems[state.objects[job.targetId].systemId].galaxyId;
     if (Object.keys(state.systems).length < GALAXY_BALANCE.maxDetailedSystems && Object.keys(state.objects).length < BALANCE.maxObjects - 4) generateSystem(state, job.index, galaxyId);
     else { state.galaxies[galaxyId].surveyed = Math.min(state.galaxies[galaxyId].totalSystems, state.galaxies[galaxyId].surveyed + 1); state.resources.knowledge += 75; logEvent(state, 'SectorSurveyed', job.targetId, 'A distant sector catalogued', 'The detailed simulation remains bounded. Survey data adds 75 knowledge.'); }
-    state.exploration.completed.interstellar++; state.exploration.job = null; return;
+    findAnomaly(state, job.targetId, job.index); state.exploration.completed.interstellar++; state.exploration.job = null; return;
   }
   const type = (['moon', 'planet', 'asteroid'] as const)[job.index % 3];
   const home = state.objects[job.targetId];
@@ -49,6 +50,7 @@ export function completeExploration(state: Universe): void {
   }
   if (type === 'moon' && home.planet) home.planet.habitability = Math.min(1, home.planet.habitability + 0.025);
   state.objects[id] = object; parent.children.push(id);
+  if (type === 'asteroid') findAnomaly(state, id, job.index);
   state.exploration.completed.orbital++;
   state.exploration.job = null;
   logEvent(state, 'CelestialDiscovered', id, `${object.name}, a new ${type}`, type === 'moon' ? `A companion to ${home.name}. Its tides help steady the climate.` : 'Another small piece of a much larger universe.', 'wonder');

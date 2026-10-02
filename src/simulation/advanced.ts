@@ -17,6 +17,7 @@ export function simulateAdvanced(state: Universe): void {
   }
   if (Math.round(state.time) % ADVANCED_BALANCE.diplomacyInterval !== 0) return;
   const civilizations = Object.values(state.civilizations).filter(c => c.status === 'active' && c.technologies.includes('spaceflight'));
+  let relationCount = Object.keys(state.relations).length;
   for (const civ of civilizations) for (const type of Object.keys(STRUCTURES) as StructureType[]) {
     if (civ.industry >= STRUCTURES[type].industry && civ.technologies.includes(STRUCTURES[type].requires) && !state.megastructures[`${civ.id}:${type}`]) { buildStructure(state, civ.id, type, false); break; }
   }
@@ -25,7 +26,8 @@ export function simulateAdvanced(state: Universe): void {
     if (state.objects[a.planetId].systemId !== state.objects[b.planetId].systemId && !(a.technologies.includes('interstellar') && b.technologies.includes('interstellar'))) continue;
     const id = [a.id, b.id].sort().join('|');
     if (!state.relations[id]) {
-      if (Object.keys(state.relations).length >= ADVANCED_BALANCE.maxRelations) continue;
+      if (relationCount >= ADVANCED_BALANCE.maxRelations) continue;
+      relationCount++;
       const cooperative = a.traits.includes('Cooperative') || b.traits.includes('Cooperative');
       const aggressive = a.archetype === 'conquerors' || b.archetype === 'conquerors';
       state.relations[id] = { id, a: a.id, b: b.id, score: (cooperative ? 20 : 0) - (aggressive ? 25 : 0), status: 'neutral', lastUpdate: state.time };

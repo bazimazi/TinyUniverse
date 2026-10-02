@@ -13,6 +13,7 @@ import { mineAsteroid, startExploration } from './gameplay/exploration.ts';
 import { maximumSpeed, useAbility } from './gameplay/abilities.ts';
 import { buildStructure } from './gameplay/megastructures.ts';
 import { mediate } from './simulation/advanced.ts';
+import { investigate } from './gameplay/discoveries.ts';
 import type { Panel } from './ui/panels.ts';
 
 let loaded: ReturnType<typeof load>;
@@ -101,6 +102,7 @@ document.addEventListener('click', async event => {
   if (action === 'mine') toast(mineAsteroid(state, value).message);
   if (action === 'build') { const [civId, type] = value.split('|'); toast(buildStructure(state, civId, type as StructureType).message); }
   if (action === 'mediate') toast(mediate(state, value).message);
+  if (action === 'investigate') { const [id, choice] = value.split('|'); toast(investigate(state, id, (choice || null) as 'preserve' | 'decode' | null).message); }
   if (action === 'ability') toast(useAbility(state, value, state.selectedId).message);
   if (action === 'speed') state.speed = Math.min(maximumSpeed(state), Number(value));
   if (action === 'debug' && import.meta.env.DEV) { const { debugAction } = await import('./gameplay/debug.ts'); toast(debugAction(state, value).message); }
