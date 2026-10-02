@@ -1,26 +1,33 @@
-import { BALANCE, STELLAR_BALANCE } from '../core/config.ts';
+import { BALANCE, GALAXY_BALANCE, STELLAR_BALANCE } from '../core/config.ts';
 import { logEvent, makeObject } from '../core/universe.ts';
 import { random, entitySeed } from '../core/random.ts';
 import { spend } from '../simulation/economy.ts';
 import type { ActionResult, ExploreKind, Universe } from '../core/types.ts';
 import { hasTechnology } from '../simulation/civilizations.ts';
 import { generateSystem } from './systems.ts';
+import { discoverGalaxy } from './galaxies.ts';
 export function startExploration(state: Universe, kind: ExploreKind = 'orbital'): ActionResult {
   if (state.totalUpgrades < BALANCE.exploration.unlockUpgrades) return { ok: false, message: 'Build two planet upgrades to unlock orbital exploration.' };
   if (state.exploration.job) return { ok: false, message: 'An expedition is already underway.' };
   if (kind === 'interstellar' && !hasTechnology(state, 'spaceflight')) return { ok: false, message: 'A civilization must discover spaceflight to reach another star.' };
-  if (Object.keys(state.objects).length >= BALANCE.maxObjects) return { ok: false, message: 'This region is fully surveyed.' };
+  if (kind === 'galactic' && !hasTechnology(state, 'interstellar')) return { ok: false, message: 'Interstellar travel opens galactic exploration.' };
+  if (kind === 'galactic' && Object.keys(state.galaxies).length >= GALAXY_BALANCE.maxGalaxies) return { ok: false, message: 'This universe is fully charted. A rebirth will reveal new reaches.' };
+  if (kind === 'orbital' && Object.keys(state.objects).length >= BALANCE.maxObjects) return { ok: false, message: 'This region is fully surveyed.' };
   const target = state.objects[state.selectedId];
-  const home = target.type === 'planet' ? target : state.objects['planet-0'];
-  if (!spend(state, kind === 'orbital' ? BALANCE.exploration.cost : STELLAR_BALANCE.interstellarCost)) return { ok: false, message: 'Gather resources for an expedition.' };
-  state.exploration.job = { kind, targetId: home.id, startedAt: state.time, endsAt: state.time + (kind === 'orbital' ? BALANCE.exploration.duration : STELLAR_BALANCE.interstellarDuration), index: state.exploration.completed[kind] };
+  const home = target.type === 'planet' ? target : Object.values(state.objects).find(o => o.systemId === target.systemId && o.planet) ?? state.objects['planet-0'];
+  if (!spend(state, kind === 'orbital' ? BALANCE.exploration.cost : kind === 'interstellar' ? STELLAR_BALANCE.interstellarCost : GALAXY_BALANCE.cost)) return { ok: false, message: 'Gather resources for an expedition.' };
+  state.exploration.job = { kind, targetId: home.id, startedAt: state.time, endsAt: state.time + (kind === 'orbital' ? BALANCE.exploration.duration : kind === 'interstellar' ? STELLAR_BALANCE.interstellarDuration : GALAXY_BALANCE.duration), index: state.exploration.completed[kind] };
   return { ok: true, message: 'Your first little probe is on its way.' };
 }
 export function completeExploration(state: Universe): void {
   const job = state.exploration.job;
   if (!job || job.endsAt > state.time + 1e-7) return;
+  if (job.kind === 'galactic') { discoverGalaxy(state, job.index + 1); state.exploration.completed.galactic++; state.exploration.job = null; return; }
   if (job.kind === 'interstellar') {
-    generateSystem(state, job.index); state.exploration.completed.interstellar++; state.exploration.job = null; return;
+    const galaxyId = state.systems[state.objects[job.targetId].systemId].galaxyId;
+    if (Object.keys(state.systems).length < GALAXY_BALANCE.maxDetailedSystems && Object.keys(state.objects).length < BALANCE.maxObjects - 4) generateSystem(state, job.index, galaxyId);
+    else { state.galaxies[galaxyId].surveyed = Math.min(state.galaxies[galaxyId].totalSystems, state.galaxies[galaxyId].surveyed + 1); state.resources.knowledge += 75; logEvent(state, 'SectorSurveyed', job.targetId, 'A distant sector catalogued', 'The detailed simulation remains bounded. Survey data adds 75 knowledge.'); }
+    state.exploration.completed.interstellar++; state.exploration.job = null; return;
   }
   const type = (['moon', 'planet', 'asteroid'] as const)[job.index % 3];
   const home = state.objects[job.targetId];
@@ -28,6 +35,7 @@ export function completeExploration(state: Universe): void {
   const id = `${parent.id}-${type}-${job.index}`;
   const object = makeObject(state.seed, id, type, parent.id);
   object.systemId = home.systemId;
+  object.lastLifeUpdate = state.time;
   const rng = random(entitySeed(state.seed, id));
   object.createdAt = state.time;
   object.radius = type === 'moon' ? 7 : type === 'asteroid' ? 4 : 15 + rng() * 7;

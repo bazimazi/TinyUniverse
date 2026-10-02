@@ -6,14 +6,16 @@ import type { Universe, UpgradeId } from '../core/types.ts';
 import { civilizationPanel, researchPanel } from './civilizations.ts';
 import { influencePanel } from './influence.ts';
 import { explorationPanel } from './exploration.ts';
-export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'events' | 'settings';
-export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', influence: 'Influence', events: 'Journal', settings: 'Settings' };
+import { atlasPanel } from './atlas.ts';
+export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'atlas' | 'events' | 'settings';
+export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', influence: 'Influence', atlas: 'Atlas', events: 'Journal', settings: 'Settings' };
 export function button(label: string, action: string, value = '', disabled = false, secondary = false): string {
   return `<button class="${secondary ? 'secondary' : 'action'}" data-action="${action}" data-value="${escape(value)}" ${disabled ? 'disabled' : ''}>${escape(label)}</button>`;
 }
 export function metric(label: string, value: string): string { return `<div class="metric"><span>${escape(label)}</span><strong>${escape(value)}</strong></div>`; }
 export function panelContent(state: Universe, panel: Panel): string {
   const object = selectedObject(state);
+  if (panel === 'atlas') return atlasPanel(state);
   if (panel === 'influence') return influencePanel(state);
   if (panel === 'civilizations') return civilizationPanel(state);
   if (panel === 'research') return researchPanel(state);

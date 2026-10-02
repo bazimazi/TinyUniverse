@@ -11,7 +11,7 @@ export class Scene {
   private scale = 1;
   private targetScale = 1;
   private canvas: HTMLCanvasElement;
-  view: 'planet' | 'system' = 'planet';
+  view: 'planet' | 'system' | 'galaxy' | 'universe' = 'planet';
   constructor(canvas: HTMLCanvasElement, select: (id: string) => void) {
     this.canvas = canvas;
     const ctx = canvas.getContext('2d');
@@ -51,6 +51,7 @@ export class Scene {
     }
     this.hits.length = 0;
     const selected = selectedObject(state);
+    if (this.view === 'galaxy' || this.view === 'universe') { this.cosmos(state); return; }
     if (this.view === 'planet') {
       const radius = Math.min(w * 0.28, h * 0.29) * this.scale;
       this.body(selected, w / 2, h * 0.46, radius, true, state.time);
@@ -70,6 +71,25 @@ export class Scene {
         }
         this.body(object, x, y, Math.max(5, object.radius * unit * 0.5), object.id === state.selectedId, state.time);
       }
+    }
+  }
+  private cosmos(state: Universe): void {
+    const c = this.ctx, w = this.width, h = this.height;
+    const galaxyId = state.systems[state.objects[state.selectedId].systemId].galaxyId;
+    const dots = this.view === 'galaxy' ? Object.values(state.systems).filter(s => s.galaxyId === galaxyId).map(s => ({ name: s.name, id: s.starId, x: s.position.x, y: s.position.y })) : Object.values(state.galaxies).map((g, i) => ({ name: g.name, id: Object.values(state.systems).find(s => s.galaxyId === g.id)?.starId ?? state.selectedId, x: Math.cos(i * 2.4) * Math.sqrt(i) * 0.14, y: Math.sin(i * 2.4) * Math.sqrt(i) * 0.14 }));
+    const extent = Math.max(0.7, ...dots.map(d => Math.hypot(d.x, d.y))), unit = Math.min(w, h) / (extent * 2.6) * this.scale;
+    c.strokeStyle = '#9ee9d911'; c.lineWidth = 12;
+    for (let arm = 0; arm < 3; arm++) {
+      c.beginPath();
+      for (let i = 0; i < 100; i++) { const r = i / 100 * Math.min(w, h) * 0.4, angle = i / 25 + arm * Math.PI * 2 / 3; const x = w / 2 + Math.cos(angle) * r, y = h / 2 + Math.sin(angle) * r * 0.7; if (i === 0) c.moveTo(x, y); else c.lineTo(x, y); }
+      c.stroke();
+    }
+    for (const dot of dots) {
+      const x = w / 2 + dot.x * unit, y = h / 2 + dot.y * unit;
+      c.fillStyle = '#aef0db'; c.shadowColor = '#aef0db'; c.shadowBlur = 14;
+      c.beginPath(); c.arc(x, y, this.view === 'universe' ? 7 : 4, 0, Math.PI * 2); c.fill(); c.shadowBlur = 0;
+      c.font = '11px system-ui'; c.textAlign = 'center'; c.fillText(dot.name, x, y + 22);
+      this.hits.push({ id: dot.id, x, y, radius: 22 });
     }
   }
   private body(object: CelestialObject, x: number, y: number, r: number, selected: boolean, time: number): void {

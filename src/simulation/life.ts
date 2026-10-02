@@ -1,6 +1,7 @@
 import { BALANCE } from '../core/config.ts';
 import { random, entitySeed } from '../core/random.ts';
 import { logEvent } from '../core/universe.ts';
+import { updateInterval } from '../core/tiers.ts';
 import type { CelestialObject, Ecosystem, Universe } from '../core/types.ts';
 export function habitability(object: CelestialObject, state: Universe): number {
   const p = object.planet!;
@@ -8,10 +9,13 @@ export function habitability(object: CelestialObject, state: Universe): number {
   const tides = object.children.filter(id => state.objects[id]?.type === 'moon').length * 0.025;
   return Math.min(1, Math.max(0, (0.2 + p.atmosphere * 0.3 + p.water * 0.3 + p.magneticField * 0.2 + tides) * temperature));
 }
-export function simulateLife(state: Universe, seconds: number): void {
+export function simulateLife(state: Universe): void {
   for (const object of Object.values(state.objects)) {
     const p = object.planet, life = object.life;
     if (!p || !life) continue;
+    const seconds = state.time - object.lastLifeUpdate;
+    if (seconds + 1e-7 < updateInterval(state, object)) continue;
+    object.lastLifeUpdate = state.time;
     p.habitability = habitability(object, state);
     const suitability = p.habitability * Math.min(1, p.water * 2);
     if (p.habitability >= BALANCE.life.minimumHabitability) life.progress += seconds * suitability * (1 + object.upgrades.biodiversity * 0.15);
@@ -30,7 +34,7 @@ export function simulateLife(state: Universe, seconds: number): void {
     life.species = life.stage === 'chemistry' ? 0 : Math.max(1, Math.floor(life.progress * suitability / 8));
     p.biodiversity = Math.min(1, Object.values(life.populations).reduce((a, b) => a + b, 0) / 6 + object.upgrades.biodiversity * 0.025);
     const rng = random(entitySeed(object.seed, `planet-event:${Math.round(state.time / BALANCE.decisionInterval)}`));
-    if (rng() < BALANCE.life.eventChance && object.shieldUntil <= state.time) {
+    if (rng() < 1 - (1 - BALANCE.life.eventChance) ** (seconds / BALANCE.decisionInterval) && object.shieldUntil <= state.time) {
       const volcanic = rng() < 0.5;
       p.temperature = Math.max(180, Math.min(380, p.temperature + (volcanic ? 3 : -4)));
       p.atmosphere = Math.max(0, Math.min(1, p.atmosphere + (volcanic ? 0.015 : -0.01)));

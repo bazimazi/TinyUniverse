@@ -3,6 +3,7 @@ import { TECHNOLOGIES } from '../core/technology.ts';
 import { entitySeed, nameFor, random } from '../core/random.ts';
 import { logEvent } from '../core/universe.ts';
 import type { Civilization, Domain, Universe } from '../core/types.ts';
+import { updateInterval } from '../core/tiers.ts';
 const DOMAINS: Domain[] = ['biology', 'physics', 'energy', 'computing', 'materials', 'space', 'social', 'gravity', 'quantum'];
 const TRAITS = ['Curious', 'Cooperative', 'Scientific', 'Industrial', 'Adaptive', 'Expansionist', 'Spiritual', 'Aggressive', 'Isolationist'];
 export function civilizationEvent(state: Universe, civ: Civilization, type: string, title: string, detail: string, severity: 'info' | 'wonder' | 'danger' = 'info'): void {
@@ -21,7 +22,7 @@ export function foundCivilization(state: Universe, planetId: string): Civilizati
     government: traits.includes('Cooperative') ? 'Council' : traits.includes('Aggressive') ? 'Dominion' : 'Federation',
     stability: 0.7, science: traits.includes('Scientific') ? 0.9 : 0.6, energy: 0.6, economy: 0.5, infrastructure: 0.3,
     military: traits.includes('Aggressive') ? 0.8 : 0.3, knowledge: 0, level: 0, distress: 0, domains,
-    technologies: [], researching: null, researchPoints: 0, timeline: [], followed: false, colonies: [planetId], supportUntil: 0
+    technologies: [], researching: null, researchPoints: 0, timeline: [], followed: false, colonies: [planetId], supportUntil: 0, lastUpdate: state.time
   };
   state.civilizations[id] = civ;
   civilizationEvent(state, civ, 'CivilizationFounded', `${civ.name} has emerged`, `The first settlements on ${state.objects[planetId].name}. Their story is their own.`, 'wonder');
@@ -33,10 +34,13 @@ export function collapse(state: Universe, civ: Civilization, reason: string): vo
   civ.status = 'extinct'; civ.population = 0; civ.researching = null;
   civilizationEvent(state, civ, 'CivilizationCollapse', `${civ.name} fell silent`, `${reason} Their ruins and recorded history remain.`, 'danger');
 }
-export function simulateCivilizations(state: Universe, seconds: number): void {
+export function simulateCivilizations(state: Universe): void {
   for (const object of Object.values(state.objects)) if (object.life?.stage === 'intelligent' && !state.civilizations[`civ-${object.id}`]) foundCivilization(state, object.id);
   for (const civ of Object.values(state.civilizations)) {
     if (civ.status !== 'active') continue;
+    const seconds = state.time - civ.lastUpdate;
+    if (seconds + 1e-7 < updateInterval(state, state.objects[civ.planetId])) continue;
+    civ.lastUpdate = state.time;
     const planet = state.objects[civ.planetId].planet!;
     const food = Math.max(0.05, planet.biodiversity + planet.water * 0.5);
     const carrying = BALANCE.civilization.capacity * planet.habitability * (0.2 + civ.infrastructure) * food;

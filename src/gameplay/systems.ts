@@ -12,9 +12,10 @@ export function generateSystem(state: Universe, index: number, galaxyId = 'galax
   const angle = index * 2.399963, distance = 0.15 + Math.sqrt(index + 1) * 0.12;
   const system: StarSystem = { id, seed, name: star.name, starId: star.id, position: { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance }, galaxyId };
   state.systems[id] = system; state.objects[star.id] = star;
+  if (state.galaxies?.[galaxyId]) state.galaxies[galaxyId].surveyed++;
   for (let i = 0, count = 1 + Math.floor(rng() * 3); i < count; i++) {
     const type = i === 2 ? 'gas-giant' : 'planet', object = makeObject(state.seed, `${id}-planet-${i}`, type, star.id);
-    object.systemId = id; object.createdAt = state.time; object.name = `${nameFor(object.seed)} ${i + 1}`;
+    object.systemId = id; object.createdAt = state.time; object.lastLifeUpdate = state.time; object.name = `${nameFor(object.seed)} ${i + 1}`;
     object.orbit = { radius: 90 + i * 70, period: 75 + i * 80, eccentricity: rng() * 0.12, phase: rng() * Math.PI * 2 };
     if (object.planet) { object.planet.temperature = 260 + rng() * 60; object.planet.water = 0.2 + rng() * 0.65; }
     if (type === 'gas-giant') { object.color = '#cca8df'; object.radius = 32; object.mass = 200; }

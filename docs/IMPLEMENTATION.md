@@ -46,6 +46,12 @@ Implemented spaceflight-gated interstellar expeditions, deterministic multi-plan
 
 Validation: reproducible/idempotent generation, valid hierarchies, remnant outcomes and climate effects; full build, tests, performance and browser gates.
 7. Galaxy: lazy procedural systems, simulation tiers and autonomous expansion.
+
+## Phase 7 — Galaxy
+
+Implemented lazy seeded galaxy catalogs, bounded detailed systems, active/nearby/background simulation tiers, statistical distant populations, autonomous colonization, galaxy/universe camera scales and a statistics atlas. Large regions remain summaries. Optimized expansion with a shared occupancy index instead of repeatedly scanning every civilization for every planet.
+
+Validation: tier assignment, lazy generation, civilization expansion, a 48-system/64-galaxy 24h benchmark, full headless tests and desktop/portrait browser checks.
 8. Advanced civilizations: diplomacy, archetypes, megastructures and technology.
 9. Discovery: rare events, ruins, codex and exploration chains.
 10. Prestige: rebirth, knowledge, laws, modifiers and endless progression.

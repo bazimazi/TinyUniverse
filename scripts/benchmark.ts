@@ -1,7 +1,11 @@
 import { createUniverse } from '../src/core/universe.ts';
 import { advance } from '../src/simulation/engine.ts';
 import { assertUniverse } from '../src/core/invariants.ts';
+import { generateSystem } from '../src/gameplay/systems.ts';
+import { discoverGalaxy } from '../src/gameplay/galaxies.ts';
 const state = createUniverse(42, 0);
+for (let index = 0; index < 47; index++) generateSystem(state, index);
+for (let index = 1; index < 64; index++) discoverGalaxy(state, index);
 const start = performance.now(); advance(state, 86400); const elapsed = performance.now() - start;
 assertUniverse(state);
 console.log(`24h simulation: ${elapsed.toFixed(2)}ms, ${Object.keys(state.objects).length} objects, ${JSON.stringify(state).length} save bytes`);

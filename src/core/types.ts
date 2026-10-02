@@ -19,11 +19,12 @@ export interface CelestialObject {
   createdAt: number; parentId: string | null; children: string[]; orbit: Orbit | null;
   color: string; upgrades: Record<UpgradeId, number>; planet: PlanetProperties | null;
   favorite: boolean; mined: boolean; deposit: number; life: Ecosystem | null; shieldUntil: number;
-  systemId: string; stellar: StellarState | null;
+  systemId: string; stellar: StellarState | null; lastLifeUpdate: number;
 }
 export interface StellarState { class: 'red-dwarf' | 'yellow' | 'blue'; stage: 'main-sequence' | 'giant' | 'remnant'; solarMass: number; luminosity: number; temperature: number; lifespan: number; fuel: number; spin: number }
 export interface StarSystem { id: string; seed: number; name: string; starId: string; position: { x: number; y: number }; galaxyId: string }
-export type ExploreKind = 'orbital' | 'interstellar';
+export interface Galaxy { id: string; seed: number; name: string; totalSystems: number; surveyed: number; backgroundCivilizations: number; backgroundPopulation: number; lastUpdate: number }
+export type ExploreKind = 'orbital' | 'interstellar' | 'galactic';
 export interface ExplorationJob { kind: ExploreKind; targetId: string; startedAt: number; endsAt: number; index: number }
 export interface ExplorationState { job: ExplorationJob | null; completed: Record<ExploreKind, number> }
 export interface GameEvent {
@@ -38,7 +39,7 @@ export interface Civilization {
   stability: number; science: number; energy: number; economy: number; infrastructure: number;
   military: number; knowledge: number; level: number; distress: number;
   domains: Record<Domain, number>; technologies: string[]; researching: string | null; researchPoints: number;
-  timeline: GameEvent[]; followed: boolean; colonies: string[]; supportUntil: number;
+  timeline: GameEvent[]; followed: boolean; colonies: string[]; supportUntil: number; lastUpdate: number;
 }
 export interface Universe {
   version: number; seed: number; time: number; lastTimestamp: number; selectedId: string;
@@ -46,6 +47,7 @@ export interface Universe {
   settings: Settings; totalUpgrades: number; exploration: ExplorationState; civilizations: Record<string, Civilization>;
   cooldowns: Record<string, number>; speed: number;
   systems: Record<string, StarSystem>;
+  galaxies: Record<string, Galaxy>;
 }
 export interface ActionResult { ok: boolean; message: string }
 export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void }

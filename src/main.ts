@@ -25,7 +25,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div id="resources" class="resources" aria-label="Resource balances">${RESOURCE_IDS.map(id => `<div class="resource ${id}"><span>${id === 'biology' ? 'Biological potential' : id[0].toUpperCase() + id.slice(1)}</span><strong id="amount-${id}">0</strong><small id="rate-${id}">+0 /s</small></div>`).join('')}</div>
   <main><section class="observatory" aria-label="Celestial observatory"><div class="scene-head"><span class="eyebrow">THE UNIVERSE IS WAKING UP</span><span id="age" class="muted"></span></div>
   <canvas id="universe" aria-label="Interactive celestial scene. Use the world list to select objects with a keyboard." role="img"></canvas>
-  <div class="scene-controls"><button class="secondary" data-action="view" data-value="planet">Planet</button><button class="secondary" data-action="view" data-value="system">System</button><button class="icon-button" data-action="zoom" data-value="1.2" aria-label="Zoom in">+</button><button class="icon-button" data-action="zoom" data-value="0.8" aria-label="Zoom out">−</button></div><div id="time-controls" class="scene-controls" aria-label="Simulation speed"></div>
+  <div class="scene-controls"><button class="secondary" data-action="view" data-value="planet">Planet</button><button class="secondary" data-action="view" data-value="system">System</button><button class="icon-button" data-action="zoom" data-value="1.2" aria-label="Zoom in">+</button><button class="icon-button" data-action="zoom" data-value="0.8" aria-label="Zoom out">−</button></div><div class="scene-controls"><button class="secondary" data-action="view" data-value="galaxy">Galaxy</button><button class="secondary" data-action="view" data-value="universe">Universe</button></div><div id="time-controls" class="scene-controls" aria-label="Simulation speed"></div>
   <div id="goal" class="goal"></div><div id="worlds" class="worlds" aria-label="Select a celestial object"></div></section>
   <section class="dashboard"><nav aria-label="Game panels">${Object.entries(PANEL_LABELS).map(([id, label]) => `<button data-action="tab" data-value="${id}">${label}</button>`).join('')}</nav><div id="panel"></div></section></main>
   <footer>A little world. A living universe. <span id="save-status">Autosave enabled</span></footer><div id="toast" role="status" aria-live="polite"></div>`;
@@ -64,9 +64,10 @@ function render(): void {
   const goal = nextGoal(state);
   document.querySelector('#goal')!.innerHTML = `<span class="eyebrow">YOUR NEXT SMALL STEP</span><strong>${goal.title}</strong><p>${goal.detail}</p>`;
   const worldList = document.querySelector('#worlds')!;
-  const worldKey = Object.values(state.objects).map(object => `${object.id}:${object.name}:${object.id === state.selectedId}`).join('|');
+  const visibleObjects = Object.values(state.objects).filter(object => object.systemId === state.objects[state.selectedId].systemId || object.favorite).slice(0, 40);
+  const worldKey = visibleObjects.map(object => `${object.id}:${object.name}:${object.id === state.selectedId}`).join('|');
   if (worldList.getAttribute('data-key') !== worldKey) {
-    worldList.replaceChildren(...Object.values(state.objects).map(object => {
+    worldList.replaceChildren(...visibleObjects.map(object => {
       const button = document.createElement('button'); button.className = 'world-chip'; button.dataset.action = 'select'; button.dataset.value = object.id;
       button.textContent = `${object.type === 'star' ? '☀' : '◉'} ${object.name}`; button.setAttribute('aria-pressed', String(object.id === state.selectedId)); return button;
     }));
