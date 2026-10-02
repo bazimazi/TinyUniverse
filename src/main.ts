@@ -2,7 +2,7 @@ import './style.css';
 import { assertUniverse } from './core/invariants.ts';
 import { createUniverse } from './core/universe.ts';
 import { RESOURCE_IDS } from './core/types.ts';
-import type { ExploreKind, Settings, UpgradeId } from './core/types.ts';
+import type { ExploreKind, Settings, StructureType, UpgradeId } from './core/types.ts';
 import { buyUpgrade, rates } from './simulation/economy.ts';
 import { advance, resumeOffline } from './simulation/engine.ts';
 import { deserialize, load, save, serialize, SAVE_KEY } from './persistence/save.ts';
@@ -11,6 +11,8 @@ import { duration, number } from './ui/format.ts';
 import { nextGoal, panelContent, PANEL_LABELS } from './ui/panels.ts';
 import { mineAsteroid, startExploration } from './gameplay/exploration.ts';
 import { maximumSpeed, useAbility } from './gameplay/abilities.ts';
+import { buildStructure } from './gameplay/megastructures.ts';
+import { mediate } from './simulation/advanced.ts';
 import type { Panel } from './ui/panels.ts';
 
 let loaded: ReturnType<typeof load>;
@@ -50,6 +52,7 @@ function persist(notify = false): void {
 function render(): void {
   const production = rates(state);
   document.querySelector<HTMLElement>('.resource.knowledge')!.hidden = Object.keys(state.civilizations).length === 0;
+  for (const id of ['exotic', 'stellar', 'quantum'] as const) document.querySelector<HTMLElement>(`.resource.${id}`)!.hidden = state.resources[id] === 0 && production[id] === 0;
   for (const id of RESOURCE_IDS) {
     document.querySelector(`#amount-${id}`)!.textContent = number(state.resources[id]);
     document.querySelector(`#rate-${id}`)!.textContent = `+${number(production[id])} /s`;
@@ -96,6 +99,8 @@ document.addEventListener('click', async event => {
   if (action === 'upgrade') toast(buyUpgrade(state, state.selectedId, value as UpgradeId).message);
   if (action === 'explore') toast(startExploration(state, (value || 'orbital') as ExploreKind).message);
   if (action === 'mine') toast(mineAsteroid(state, value).message);
+  if (action === 'build') { const [civId, type] = value.split('|'); toast(buildStructure(state, civId, type as StructureType).message); }
+  if (action === 'mediate') toast(mediate(state, value).message);
   if (action === 'ability') toast(useAbility(state, value, state.selectedId).message);
   if (action === 'speed') state.speed = Math.min(maximumSpeed(state), Number(value));
   if (action === 'debug' && import.meta.env.DEV) { const { debugAction } = await import('./gameplay/debug.ts'); toast(debugAction(state, value).message); }

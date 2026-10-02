@@ -7,6 +7,7 @@ import { civilizationPanel, researchPanel } from './civilizations.ts';
 import { influencePanel } from './influence.ts';
 import { explorationPanel } from './exploration.ts';
 import { atlasPanel } from './atlas.ts';
+import { advancedPanel } from './advanced.ts';
 export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'atlas' | 'events' | 'settings';
 export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', influence: 'Influence', atlas: 'Atlas', events: 'Journal', settings: 'Settings' };
 export function button(label: string, action: string, value = '', disabled = false, secondary = false): string {
@@ -17,7 +18,7 @@ export function panelContent(state: Universe, panel: Panel): string {
   const object = selectedObject(state);
   if (panel === 'atlas') return atlasPanel(state);
   if (panel === 'influence') return influencePanel(state);
-  if (panel === 'civilizations') return civilizationPanel(state);
+  if (panel === 'civilizations') return civilizationPanel(state) + advancedPanel(state);
   if (panel === 'research') return researchPanel(state);
   if (panel === 'explore') return explorationPanel(state);
   if (panel === 'develop') {

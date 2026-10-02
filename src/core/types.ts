@@ -1,4 +1,4 @@
-export const RESOURCE_IDS = ['energy', 'matter', 'minerals', 'biology', 'knowledge'] as const;
+export const RESOURCE_IDS = ['energy', 'matter', 'minerals', 'biology', 'knowledge', 'exotic', 'stellar', 'quantum'] as const;
 export type ResourceId = typeof RESOURCE_IDS[number];
 export type Resources = Record<ResourceId, number>;
 export type Cost = Partial<Resources>;
@@ -40,7 +40,11 @@ export interface Civilization {
   military: number; knowledge: number; level: number; distress: number;
   domains: Record<Domain, number>; technologies: string[]; researching: string | null; researchPoints: number;
   timeline: GameEvent[]; followed: boolean; colonies: string[]; supportUntil: number; lastUpdate: number;
+  archetype: 'seekers' | 'stewards' | 'builders' | 'conquerors'; industry: number;
 }
+export interface Relation { id: string; a: string; b: string; score: number; status: 'neutral' | 'trade' | 'alliance' | 'war'; lastUpdate: number }
+export type StructureType = 'habitat' | 'dyson' | 'wormhole' | 'black-hole-generator';
+export interface Megastructure { id: string; type: StructureType; civilizationId: string; systemId: string; startedAt: number; endsAt: number; status: 'building' | 'complete' }
 export interface Universe {
   version: number; seed: number; time: number; lastTimestamp: number; selectedId: string;
   resources: Resources; objects: Record<string, CelestialObject>; events: GameEvent[];
@@ -48,6 +52,7 @@ export interface Universe {
   cooldowns: Record<string, number>; speed: number;
   systems: Record<string, StarSystem>;
   galaxies: Record<string, Galaxy>;
+  relations: Record<string, Relation>; megastructures: Record<string, Megastructure>;
 }
 export interface ActionResult { ok: boolean; message: string }
 export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void }

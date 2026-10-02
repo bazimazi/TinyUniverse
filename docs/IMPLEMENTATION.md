@@ -53,5 +53,11 @@ Implemented lazy seeded galaxy catalogs, bounded detailed systems, active/nearby
 
 Validation: tier assignment, lazy generation, civilization expansion, a 48-system/64-galaxy 24h benchmark, full headless tests and desktop/portrait browser checks.
 8. Advanced civilizations: diplomacy, archetypes, megastructures and technology.
+
+## Phase 8 — Advanced civilizations
+
+Implemented four trait-derived archetypes, contact/trade/alliance/war decisions, mediation, autonomous industry, costed player-sponsored construction and four megastructure types. Completed structures unlock stellar/exotic/quantum production. Structures complete offline and remain historical achievements even if their builders later collapse. Diplomacy and history are bounded to keep saves and mobile work predictable.
+
+Validation: autonomous contact/alliance behavior, construction gating/completion/production, headless regression checks, the large-universe benchmark and browser smoke tests.
 9. Discovery: rare events, ruins, codex and exploration chains.
 10. Prestige: rebirth, knowledge, laws, modifiers and endless progression.

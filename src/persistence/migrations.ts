@@ -25,4 +25,8 @@ export function migrate(state: Universe): void {
     for (const object of Object.values(state.objects)) object.lastLifeUpdate = state.time;
     for (const civ of Object.values(state.civilizations)) civ.lastUpdate = state.time;
   }
+  if (state.version < 8) {
+    state.relations = {}; state.megastructures = {}; state.resources.exotic = 0; state.resources.stellar = 0; state.resources.quantum = 0;
+    for (const civ of Object.values(state.civilizations)) { civ.archetype = 'seekers'; civ.industry = 0; }
+  }
 }

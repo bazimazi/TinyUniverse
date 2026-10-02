@@ -4,9 +4,10 @@ import { RESOURCE_IDS } from '../core/types.ts';
 import { habitability } from './life.ts';
 import type { ActionResult, CelestialObject, Cost, Resources, Universe, UpgradeId } from '../core/types.ts';
 export function rates(state: Universe): Resources {
-  const result: Resources = { energy: 0, matter: 0, minerals: 0, biology: 0, knowledge: 0 };
+  const result: Resources = { energy: 0, matter: 0, minerals: 0, biology: 0, knowledge: 0, exotic: 0, stellar: 0, quantum: 0 };
   for (const object of Object.values(state.objects)) {
     if (object.mined) result.minerals += BALANCE.asteroidYield;
+    if (object.type === 'black-hole') { result.exotic += 0.08; result.quantum += 0.02; }
     if (!object.planet) continue;
     result.energy += BALANCE.production.energy + object.upgrades.solar * 2;
     result.matter += BALANCE.production.matter;
@@ -14,6 +15,12 @@ export function rates(state: Universe): Resources {
     result.biology += BALANCE.production.biology + object.upgrades.oceans * 0.08 + object.upgrades.biodiversity * 0.2 + object.planet.biodiversity * 0.3;
   }
   result.knowledge = knowledgeRate(state);
+  for (const structure of Object.values(state.megastructures)) if (structure.status === 'complete') {
+    if (structure.type === 'habitat') { result.matter += 1; result.knowledge += 0.05; }
+    if (structure.type === 'dyson') { result.energy += 100; result.stellar += 12; }
+    if (structure.type === 'wormhole') result.quantum += 0.4;
+    if (structure.type === 'black-hole-generator') { result.exotic += 0.5; result.quantum += 0.1; result.energy += 80; }
+  }
   return result;
 }
 export function knowledgeRate(state: Universe): number {

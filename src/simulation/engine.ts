@@ -5,6 +5,7 @@ import { simulateLife } from './life.ts';
 import { simulateCivilizations } from './civilizations.ts';
 import { simulateStars } from './stars.ts';
 import { simulateGalaxies } from './galaxies.ts';
+import { simulateAdvanced } from './advanced.ts';
 import type { Universe } from '../core/types.ts';
 export function advance(state: Universe, seconds: number): void {
   if (!Number.isFinite(seconds) || seconds < 0) throw new Error('Elapsed time must be finite and nonnegative.');
@@ -20,6 +21,7 @@ export function advance(state: Universe, seconds: number): void {
       simulateLife(state);
       simulateCivilizations(state);
       simulateGalaxies(state);
+      simulateAdvanced(state);
     }
   }
 }

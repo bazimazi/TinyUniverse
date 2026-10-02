@@ -26,12 +26,13 @@ export function createUniverse(seed = 1307, timestamp = Date.now()): Universe {
   star.children.push(planet.id);
   return {
     version: SAVE_VERSION, seed: seed >>> 0, time: 0, lastTimestamp: timestamp, selectedId: planet.id,
-    resources: { energy: 25, matter: 12, minerals: 20, biology: 0, knowledge: 0 },
+    resources: { energy: 25, matter: 12, minerals: 20, biology: 0, knowledge: 0, exotic: 0, stellar: 0, quantum: 0 },
     objects: { [star.id]: star, [planet.id]: planet }, events: [], totalUpgrades: 0,
     exploration: { job: null, completed: { orbital: 0, interstellar: 0, galactic: 0 } },
     civilizations: {}, cooldowns: {}, speed: 1,
     systems: { 'system-0': { id: 'system-0', seed: entitySeed(seed, 'system-0'), name: 'Solace', starId: star.id, position: { x: 0, y: 0 }, galaxyId: 'galaxy-0' } },
     galaxies: { 'galaxy-0': initialGalaxy(seed, 'galaxy-0') },
+    relations: {}, megastructures: {},
     settings: { reducedMotion: false, highContrast: false, largeText: false, sound: false }
   };
 }

@@ -22,9 +22,11 @@ export function foundCivilization(state: Universe, planetId: string): Civilizati
     government: traits.includes('Cooperative') ? 'Council' : traits.includes('Aggressive') ? 'Dominion' : 'Federation',
     stability: 0.7, science: traits.includes('Scientific') ? 0.9 : 0.6, energy: 0.6, economy: 0.5, infrastructure: 0.3,
     military: traits.includes('Aggressive') ? 0.8 : 0.3, knowledge: 0, level: 0, distress: 0, domains,
-    technologies: [], researching: null, researchPoints: 0, timeline: [], followed: false, colonies: [planetId], supportUntil: 0, lastUpdate: state.time
+    technologies: [], researching: null, researchPoints: 0, timeline: [], followed: false, colonies: [planetId], supportUntil: 0, lastUpdate: state.time,
+    archetype: traits.includes('Aggressive') ? 'conquerors' : traits.includes('Industrial') ? 'builders' : traits.includes('Cooperative') ? 'stewards' : 'seekers', industry: 0
   };
   state.civilizations[id] = civ;
+  domains[civ.archetype === 'builders' ? 'energy' : civ.archetype === 'stewards' ? 'biology' : civ.archetype === 'conquerors' ? 'materials' : 'space'] *= 1.4;
   civilizationEvent(state, civ, 'CivilizationFounded', `${civ.name} has emerged`, `The first settlements on ${state.objects[planetId].name}. Their story is their own.`, 'wonder');
   return civ;
 }
@@ -41,6 +43,7 @@ export function simulateCivilizations(state: Universe): void {
     const seconds = state.time - civ.lastUpdate;
     if (seconds + 1e-7 < updateInterval(state, state.objects[civ.planetId])) continue;
     civ.lastUpdate = state.time;
+    civ.industry += seconds * civ.economy * (1 + civ.level) * (civ.archetype === 'builders' ? 1.3 : 1);
     const planet = state.objects[civ.planetId].planet!;
     const food = Math.max(0.05, planet.biodiversity + planet.water * 0.5);
     const carrying = BALANCE.civilization.capacity * planet.habitability * (0.2 + civ.infrastructure) * food;
