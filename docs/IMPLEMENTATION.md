@@ -1,69 +1,35 @@
 # Implementation record
 
-The empty repository has no existing engine contract. Use TypeScript, Vite and Canvas 2D for a playable mobile browser game. Simulation, gameplay, rendering, UI and persistence have separate modules. Each of the ten product phases is a runnable vertical slice and receives its own commit after build, tests, offline performance and UX checks.
+All ten requested development phases were implemented in order as runnable slices, with a separate commit for each. The original empty repository had no engine contract; the implementation uses TypeScript, Vite and Canvas for a mobile-first browser game.
 
-## Phase 1 — Core prototype
+| Phase | Delivered slice | Commit |
+| --- | --- | --- |
+| 1. Core prototype | Seeded planet/star, resources, upgrades, camera, idle/offline progression, save/load and responsive UI | `570c2de` |
+| 2. Celestial expansion | Timed deterministic exploration, moons, planets, nested orbits, asteroids, mining and selection | `1e62d08` |
+| 3. Life | Aggregate ecosystems, biodiversity, evolution, food-web feedback and planetary events | `bd64161` |
+| 4. Civilization | Autonomous cultures, population, 17 technologies, traits, research domains, timelines, following and collapse | `7ac57f9` |
+| 5. Player influence | Nine costed abilities, cooldowns, gravity, orbital capture, gifts, shielding, research influence and debug tools | `278e910` |
+| 6. Star systems | Interstellar exploration, seeded systems, stellar classes/lifecycles, gas giants and mass-dependent remnants | `77d9d71` |
+| 7. Galaxy | Lazy galaxy catalogs, simulation tiers, aggregate populations, colonization, camera scales and statistics atlas | `990e122` |
+| 8. Advanced civilizations | Archetypes, contact/trade/alliances/war, mediation, industry and four megastructure types | `192c9c8` |
+| 9. Discovery | Rare signals, branching investigations, ancient records, codex, artifacts, 120 milestones and personal records | `973eadd` |
+| 10. Prestige / endgame | Rebirth, Cosmic Knowledge, four laws, five modifiers, new seeds/start conditions, continuous meta production, late anomalies and AI automation | This phase's commit |
 
-Implemented a seeded world and star, Keplerian camera view, four resources, five meaningful upgrades, analytical idle production, a 24h offline cap, versioned checksummed saves with backup recovery, import/export, responsive UI and accessibility settings. First upgrade is affordable immediately; atmospheric and ocean development are the next objective.
+Phase 10 also completes production offline caching, optional local audio, accessibility settings, renaming/favorites, progressive menus, worker catch-up, save validation/migrations, CI and final UX/performance fixes.
 
-Validation: `npm run check`; Chromium desktop and 390px portrait smoke tests. Future phases must retain these checks and add domain-specific tests. Performance target is a sub-2s 24h headless simulation; browser FPS requires measurement on actual target mobile hardware.
+## Validation
 
-## Phase 2 — Celestial expansion
+Each phase passed its build, domain tests, headless performance check and desktop/portrait browser regression gates before being committed. Final coverage:
 
-Implemented gated 45-second orbital expeditions, deterministic moons/planets/asteroids, nested orbits, climate benefits from moons, mineral outposts, selection and a fitted system camera. Exploration completion splits idle production at its exact deadline so newly discovered planets produce only after discovery. Phase 1 saves migrate automatically.
+- 40 headless tests: generation, production/costs, clock rollback, offline caps, orbits, ecosystem/population/research behavior, collapse/colonization, interventions/capture, construction, diplomacy, discoveries, rebirth, all save versions 1-9, corruption and quota handling.
+- 8 Chromium browser checks across desktop and 390px portrait: first upgrades, settings/reload, civilization following/influence, atlas/codex, renaming/favorites, large text, seed input/rebirth and worker catch-up.
+- 2 production checks: cached launch with the network disabled, optional audio and absence of developer controls.
+- A deliberately played ten-minute simulation reaches a moon within three minutes and intelligent life/civilization within ten minutes.
+- A 24-hour benchmark with 48 detailed systems, 144 generated objects and 64 galaxy summaries completes in approximately 0.9 seconds on this development machine; resulting state is about 1.13 MB. The automated budget is two seconds.
+- Desktop and portrait screenshots were visually reviewed. Mobile viewport emulation does not establish performance on a physical phone.
 
-Validation: build, eight headless tests including deterministic discoveries and migration, 24h benchmark and desktop/mobile smoke tests pass.
+## Review outcomes
 
-## Remaining phase order
+Fixed repeated civilization/planet scans with an occupancy index; cached diplomacy counts; retained open histories and seed inputs during panel refresh; avoided replacing controls mid-click; made construction and investigation deadlines exact; corrected cross-system capture links and extinct-age records; validated imports before simulation; preserved corrupt saves; reclaimed expendable backup space on quota pressure; and fixed cached asset matching for offline production loads.
 
-## Phase 3 — Life
-
-Implemented aggregate ecological populations, condition-driven evolution, biodiversity, food-chain feedback and deterministic planetary climate events. A 30-second decision cadence is shared by live and offline simulation; production integrates analytically between decisions. Cold/dry worlds develop differently from sheltered worlds.
-
-Validation: build, ten headless tests (including 1h live/offline equivalence and hostile environments), bounded 24h performance and responsive browser checks pass.
-
-2. Celestial expansion: moons, planets, asteroids, exploration and selection.
-3. Life: ecosystems, biodiversity, evolution and planetary events.
-4. Civilization: population, traits, technology, history and collapse.
-
-## Phase 4 — Civilization
-
-Implemented autonomous seeded cultures and governments, trait/domain-weighted research, 17 prerequisite-linked technologies, analytical population curves, carrying capacity, stability, collapse, preserved personal timelines and following. Knowledge becomes visible only after a civilization appears.
-
-Validation: formation, population growth, technology, history, collapse and live/offline determinism tests; build, performance and portrait/desktop smoke checks.
-5. Influence: environment, gravity, gifts and civilization interventions.
-
-## Phase 5 — Player influence
-
-Implemented nine costed abilities with per-target cooldowns and technology gates: terraforming, fertility, shielding, gifts, research inspiration, orbital pushes, gravity changes and capture. Consequences enter planet/civilization histories. Milestones unlock live time controls. Development builds include resource/time/spawn/research/event tools and an object inspector; production excludes their controls.
-
-Validation: intervention costs, cooldowns, target/technology gates, research support, evolved-world browser interactions and all prior checks pass.
-6. Star systems: stars, stellar lifecycle, interstellar exploration and remnants.
-
-## Phase 6 — Star systems
-
-Implemented spaceflight-gated interstellar expeditions, deterministic multi-planet systems, gas giants, stellar classes/fuel/lifespans, giant phases and mass-dependent white dwarfs, neutron stars and black holes. Stellar luminosity changes alter planetary climates. The system renderer shows only the selected system.
-
-Validation: reproducible/idempotent generation, valid hierarchies, remnant outcomes and climate effects; full build, tests, performance and browser gates.
-7. Galaxy: lazy procedural systems, simulation tiers and autonomous expansion.
-
-## Phase 7 — Galaxy
-
-Implemented lazy seeded galaxy catalogs, bounded detailed systems, active/nearby/background simulation tiers, statistical distant populations, autonomous colonization, galaxy/universe camera scales and a statistics atlas. Large regions remain summaries. Optimized expansion with a shared occupancy index instead of repeatedly scanning every civilization for every planet.
-
-Validation: tier assignment, lazy generation, civilization expansion, a 48-system/64-galaxy 24h benchmark, full headless tests and desktop/portrait browser checks.
-8. Advanced civilizations: diplomacy, archetypes, megastructures and technology.
-
-## Phase 8 — Advanced civilizations
-
-Implemented four trait-derived archetypes, contact/trade/alliance/war decisions, mediation, autonomous industry, costed player-sponsored construction and four megastructure types. Completed structures unlock stellar/exotic/quantum production. Structures complete offline and remain historical achievements even if their builders later collapse. Diplomacy and history are bounded to keep saves and mobile work predictable.
-
-Validation: autonomous contact/alliance behavior, construction gating/completion/production, headless regression checks, the large-universe benchmark and browser smoke tests.
-9. Discovery: rare events, ruins, codex and exploration chains.
-
-## Phase 9 — Anomalies and discovery
-
-Implemented deterministic rare signals, two-stage investigations with preserve/decode choices, ancient civilization records, artifacts, a permanent categorized codex, 120 milestone achievements and personal records. Investigations split simulation at exact completion deadlines and continue offline. Retained only bounded histories and cached the diplomacy count during pair processing.
-
-Validation: branching rewards, save roundtrips, deduplication, full regression tests, large-universe performance and desktop/mobile checks.
-10. Prestige: rebirth, knowledge, laws, modifiers and endless progression.
+The remaining product work is balancing, retention/playtesting, richer content and verification on target mobile hardware. Native-store packaging and astronomical-precision physics are outside this browser implementation.

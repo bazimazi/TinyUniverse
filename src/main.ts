@@ -2,7 +2,7 @@ import './style.css';
 import { assertUniverse } from './core/invariants.ts';
 import { createUniverse } from './core/universe.ts';
 import { RESOURCE_IDS } from './core/types.ts';
-import type { ExploreKind, Settings, StructureType, UpgradeId } from './core/types.ts';
+import type { ExploreKind, LawId, Settings, StructureType, UpgradeId } from './core/types.ts';
 import { buyUpgrade, rates } from './simulation/economy.ts';
 import { advance, resumeOffline } from './simulation/engine.ts';
 import { deserialize, load, save, serialize, SAVE_KEY } from './persistence/save.ts';
@@ -14,6 +14,10 @@ import { maximumSpeed, useAbility } from './gameplay/abilities.ts';
 import { buildStructure } from './gameplay/megastructures.ts';
 import { mediate } from './simulation/advanced.ts';
 import { investigate } from './gameplay/discoveries.ts';
+import { buyLaw, canRebirth, MODIFIERS, rebirth, rebirthReward } from './gameplay/prestige.ts';
+import { hasTechnology } from './simulation/civilizations.ts';
+import { AmbientAudio } from './audio/ambient.ts';
+import { catchUp } from './simulation/offline-client.ts';
 import type { Panel } from './ui/panels.ts';
 
 let loaded: ReturnType<typeof load>;
@@ -22,7 +26,16 @@ let state = loaded.state ?? createUniverse();
 let savingBlocked = loaded.corrupt;
 let panel: Panel = 'develop';
 let lastPanel = '';
-const offline = loaded.state ? resumeOffline(state, Date.now()) : { seconds: 0, capped: false };
+let lastPanelRender = 0;
+let lastInteraction = 0;
+let lastRenderedPanel: Panel = 'develop';
+document.querySelector('#app')!.innerHTML = '<div class="loading" role="status">Your universe is waking up…</div>';
+let offline = { seconds: 0, capped: false };
+if (loaded.state) {
+  try { const caught = await catchUp(state, Date.now()); state = caught.state; offline = caught.result; }
+  catch (error) { savingBlocked = true; loaded.warning = (error as Error).message; }
+} else state.settings.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let resuming = false;
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <header><a class="brand" href="/" aria-label="Tiny Universe home"><span class="brand-icon">✦</span> TINY UNIVERSE</a><button class="icon-button" data-action="tab" data-value="settings" aria-label="Settings">⚙</button></header>
   <div id="resources" class="resources" aria-label="Resource balances">${RESOURCE_IDS.map(id => `<div class="resource ${id}"><span>${id === 'biology' ? 'Biological potential' : id[0].toUpperCase() + id.slice(1)}</span><strong id="amount-${id}">0</strong><small id="rate-${id}">+0 /s</small></div>`).join('')}</div>
@@ -34,6 +47,8 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <footer>A little world. A living universe. <span id="save-status">Autosave enabled</span></footer><div id="toast" role="status" aria-live="polite"></div>`;
 const scene = new Scene(document.querySelector<HTMLCanvasElement>('#universe')!, id => { state.selectedId = id; lastPanel = ''; render(); });
 const content = document.querySelector<HTMLDivElement>('#panel')!;
+const ambient = new AmbientAudio();
+let lastSoundEvent = state.events.at(-1)?.id;
 let toastTimer: ReturnType<typeof setTimeout>;
 function toast(message: string): void {
   document.querySelector('#toast')!.textContent = message;
@@ -42,6 +57,7 @@ function toast(message: string): void {
   toastTimer = setTimeout(() => document.querySelector('#toast')!.classList.remove('visible'), 6000);
 }
 function persist(notify = false): void {
+  if (resuming) return;
   if (savingBlocked) { if (notify) toast('Save is protected. Import a backup or choose Start fresh in settings.'); return; }
   try {
     state.lastTimestamp = Math.max(state.lastTimestamp, Date.now());
@@ -59,7 +75,7 @@ function render(): void {
     document.querySelector(`#rate-${id}`)!.textContent = `+${number(production[id])} /s`;
   }
   document.querySelector('#age')!.textContent = duration(state.time);
-  const speeds = [1, 2, 5, 10, 25].filter(speed => speed <= maximumSpeed(state));
+  const speeds = [1, 2, 5, 10, 25, 100].filter(speed => speed <= maximumSpeed(state));
   const controls = document.querySelector('#time-controls')!, speedKey = `${speeds.join(',')}:${state.speed}`;
   if (controls.getAttribute('data-key') !== speedKey) {
     controls.innerHTML = speeds.length > 1 ? speeds.map(speed => `<button class="secondary" data-action="speed" data-value="${speed}" aria-pressed="${state.speed === speed}">${speed}×</button>`).join('') : '';
@@ -77,25 +93,43 @@ function render(): void {
     }));
     worldList.setAttribute('data-key', worldKey);
   }
-  const html = panelContent(state, panel);
+  const refreshPanel = !lastPanel || (performance.now() - lastPanelRender > 1000 && performance.now() - lastInteraction > 500);
+  const html = refreshPanel ? panelContent(state, panel) : lastPanel;
   if (html !== lastPanel && !content.contains(document.activeElement?.closest('input, textarea') ?? null)) {
     const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const action = focused?.dataset.action, value = focused?.dataset.value;
+    const seedText = document.querySelector<HTMLInputElement>('#rebirth-seed')?.value;
+    const openDetails = lastRenderedPanel === panel ? [...content.querySelectorAll('details')].map(details => details.open) : [];
     content.innerHTML = html; lastPanel = html;
+    content.querySelectorAll('details').forEach((details, index) => { details.open = openDetails[index] ?? false; });
+    const seedInput = document.querySelector<HTMLInputElement>('#rebirth-seed');
+    if (seedInput && seedText !== undefined) seedInput.value = seedText;
+    lastRenderedPanel = panel;
+    lastPanelRender = performance.now();
     if (action) [...content.querySelectorAll<HTMLElement>('[data-action]')].find(el => el.dataset.action === action && el.dataset.value === value)?.focus({ preventScroll: true });
   }
   document.querySelectorAll<HTMLButtonElement>('nav button').forEach(button => button.setAttribute('aria-current', button.dataset.value === panel ? 'page' : 'false'));
+  const unlocked: Record<Panel, boolean> = { develop: true, explore: state.totalUpgrades >= 2, civilizations: Object.keys(state.civilizations).length > 0, research: Object.keys(state.civilizations).length > 0, influence: state.totalUpgrades >= 3 || Object.keys(state.civilizations).length > 0, atlas: Object.keys(state.systems).length > 1, discoveries: Object.keys(state.discoveries).length > 0, prestige: hasTechnology(state, 'spaceflight') || state.meta.runs > 0, events: true, settings: true };
+  document.querySelectorAll<HTMLButtonElement>('nav button').forEach(button => { button.hidden = !unlocked[button.dataset.value as Panel]; });
+  document.querySelector<HTMLButtonElement>('[data-action="view"][data-value="galaxy"]')!.hidden = Object.keys(state.systems).length < 2;
+  document.querySelector<HTMLButtonElement>('[data-action="view"][data-value="universe"]')!.hidden = Object.keys(state.galaxies).length < 2;
   document.body.classList.toggle('high-contrast', state.settings.highContrast);
   document.body.classList.toggle('large-text', state.settings.largeText);
   document.body.classList.toggle('reduced-motion', state.settings.reducedMotion);
+  const newest = state.events.at(-1);
+  if (newest && newest.id !== lastSoundEvent) { if (newest.severity === 'wonder') ambient.discovery(state.settings.sound); lastSoundEvent = newest.id; }
 }
 document.addEventListener('click', async event => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
   if (!button) return;
   const { action, value = '' } = button.dataset;
+  if (resuming) return;
   if (action === 'tab') panel = value as Panel;
   if (action === 'select') state.selectedId = value;
+  if (action === 'favorite') state.objects[state.selectedId].favorite = !state.objects[state.selectedId].favorite;
+  if (action === 'rename') { const name = window.prompt('Name this world', state.objects[state.selectedId].name)?.trim().slice(0, 40); if (name) state.objects[state.selectedId].name = name; }
   if (action === 'view') scene.view = value as Scene['view'];
+  if (action === 'view') ambient.configure(state.settings, scene.view);
   if (action === 'zoom') scene.zoom(Number(value));
   if (action === 'upgrade') toast(buyUpgrade(state, state.selectedId, value as UpgradeId).message);
   if (action === 'explore') toast(startExploration(state, (value || 'orbital') as ExploreKind).message);
@@ -103,6 +137,10 @@ document.addEventListener('click', async event => {
   if (action === 'build') { const [civId, type] = value.split('|'); toast(buildStructure(state, civId, type as StructureType).message); }
   if (action === 'mediate') toast(mediate(state, value).message);
   if (action === 'investigate') { const [id, choice] = value.split('|'); toast(investigate(state, id, (choice || null) as 'preserve' | 'decode' | null).message); }
+  if (action === 'law') toast(buyLaw(state, value as LawId).message);
+  if (action === 'rebirth' && canRebirth(state) && window.confirm(`Rebirth this universe for ${rebirthReward(state)} Cosmic Knowledge? Worlds, civilizations and local resources reset. Discoveries, artifacts, achievements, records and laws remain.`)) {
+    try { const seed = document.querySelector<HTMLInputElement>('#rebirth-seed')?.value; state = rebirth(state, seed ? Number(seed) : undefined); scene.view = 'planet'; panel = 'develop'; persist(); toast('A new universe is waking up.'); } catch (error) { toast((error as Error).message); }
+  }
   if (action === 'ability') toast(useAbility(state, value, state.selectedId).message);
   if (action === 'speed') state.speed = Math.min(maximumSpeed(state), Number(value));
   if (action === 'debug' && import.meta.env.DEV) { const { debugAction } = await import('./gameplay/debug.ts'); toast(debugAction(state, value).message); }
@@ -115,34 +153,52 @@ document.addEventListener('click', async event => {
   }
   if (action === 'reset' && window.confirm('Start a new universe? Current progress will be replaced. Export a save first to keep it.')) {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) localStorage.setItem(`${SAVE_KEY}.archive`, raw); } catch { /* Exports remain available. */ }
-    state = createUniverse(); savingBlocked = false; persist(true);
+    state = createUniverse(); scene.view = 'planet'; savingBlocked = false; persist(true);
   }
   lastPanel = ''; render();
+  if (state.settings.haptics) navigator.vibrate?.(10);
 });
 document.addEventListener('change', async event => {
+  if (resuming) return;
   const input = event.target as HTMLInputElement;
-  if (input.dataset.setting) { state.settings[input.dataset.setting as keyof Settings] = input.checked; persist(); }
+  if (input.id === 'rebirth-seed') return;
+  if (input.dataset.setting) { state.settings[input.dataset.setting as keyof Settings] = input.checked; ambient.configure(state.settings, scene.view); persist(); }
+  if (input.dataset.automation && hasTechnology(state, 'ai')) { state.automation[input.dataset.automation as keyof typeof state.automation] = input.checked; persist(); }
+  if (input.dataset.modifier && MODIFIERS[input.dataset.modifier] && MODIFIERS[input.dataset.modifier].runs <= state.meta.runs + 1) {
+    const id = input.dataset.modifier;
+    if (input.checked && state.meta.nextModifiers.length < 2) state.meta.nextModifiers.push(id);
+    else { state.meta.nextModifiers = state.meta.nextModifiers.filter(value => value !== id); input.checked = false; }
+    persist();
+  }
   if (input.id === 'import-file' && input.files?.[0]) {
     try {
       const imported = deserialize(await input.files[0].text());
       if (!window.confirm('Replace your current universe with this save?')) return;
-      state = imported; resumeOffline(state, Date.now()); savingBlocked = false; persist(); toast('Your universe has been restored.');
+      state = imported; resumeOffline(state, Date.now()); scene.view = 'planet'; savingBlocked = false; persist(); toast('Your universe has been restored.');
     } catch (error) { toast(error instanceof Error ? error.message : 'Unable to read save.'); }
   }
   lastPanel = ''; render();
 });
 let previous = performance.now(), lastRender = 0;
+document.addEventListener('pointerdown', () => { lastInteraction = performance.now(); ambient.configure(state.settings, scene.view); }, { passive: true });
+document.addEventListener('keydown', () => { lastInteraction = performance.now(); });
 function frame(now: number): void {
   if (!document.hidden) {
-    advance(state, Math.max(0, (now - previous) / 1000) * state.speed);
+    if (!resuming) advance(state, Math.min(5, Math.max(0, (now - previous) / 1000)) * Math.min(state.speed, maximumSpeed(state)));
     if (now - lastRender > 250) { render(); lastRender = now; }
     scene.draw(state);
   }
   previous = now; requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) persist();
-  else { const result = resumeOffline(state, Date.now()); previous = performance.now(); if (result.seconds > 5) toast(`Welcome back. Your universe evolved for ${duration(result.seconds)}.`); render(); }
+document.addEventListener('visibilitychange', async () => {
+  if (document.hidden) { persist(); ambient.suspend(); }
+  else {
+    if (resuming) return;
+    resuming = true;
+    try { const caught = await catchUp(state, Date.now()); state = caught.state; previous = performance.now(); ambient.configure(state.settings, scene.view); if (caught.result.seconds > 5) toast(`Welcome back. Your universe evolved for ${duration(caught.result.seconds)}.`); }
+    catch (error) { savingBlocked = true; toast((error as Error).message); }
+    finally { resuming = false; persist(); render(); }
+  }
 });
 window.addEventListener('pagehide', () => persist());
 setInterval(() => persist(), 15000);
@@ -150,3 +206,4 @@ if (import.meta.env.DEV) setInterval(() => assertUniverse(state), 5000);
 render(); requestAnimationFrame(frame);
 if (loaded.warning) toast(loaded.warning);
 else if (offline.seconds > 5) toast(`Welcome back. ${duration(offline.seconds)} of progress${offline.capped ? ' (offline cap reached)' : ''}.`);
+if (import.meta.env.PROD && 'serviceWorker' in navigator) void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => { /* Idle saves still work without an installed offline cache. */ });

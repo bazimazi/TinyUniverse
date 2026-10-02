@@ -1,5 +1,6 @@
 import { RESOURCE_IDS } from './types.ts';
 import type { Universe } from './types.ts';
+import { validateDetails } from './validation.ts';
 export function assertUniverse(state: Universe): void {
   const finite = (value: unknown, minimum = 0) => typeof value === 'number' && Number.isFinite(value) && value >= minimum;
   if (!state || !finite(state.seed) || !finite(state.time) || !finite(state.lastTimestamp) || !finite(state.totalUpgrades)) throw new Error('Invalid universe clock or progression.');
@@ -29,9 +30,10 @@ export function assertUniverse(state: Universe): void {
   if (!state.civilizations) throw new Error('Invalid civilizations.');
   if (!state.relations || !state.megastructures) throw new Error('Invalid advanced civilization state.');
   if (!state.discoveries || !state.anomalies || !Array.isArray(state.achievements) || !Array.isArray(state.artifacts) || !state.records || Object.values(state.records).some(value => !finite(value))) throw new Error('Invalid discovery records.');
-  if (!state.cooldowns || Object.values(state.cooldowns).some(value => !finite(value)) || ![1, 2, 5, 10, 25].includes(state.speed)) throw new Error('Invalid abilities or speed.');
+  if (!state.cooldowns || Object.values(state.cooldowns).some(value => !finite(value)) || ![1, 2, 5, 10, 25, 100].includes(state.speed)) throw new Error('Invalid abilities or speed.');
   for (const civ of Object.values(state.civilizations)) {
     if (!state.objects[civ.planetId]?.planet || !finite(civ.population) || !finite(civ.foundedAt) || !finite(civ.level) || !finite(civ.researchPoints) || !Array.isArray(civ.technologies) || !Array.isArray(civ.timeline) || !['active', 'extinct'].includes(civ.status)) throw new Error('Invalid civilization.');
     for (const value of [civ.stability, civ.science, civ.energy, civ.economy, civ.infrastructure, civ.military]) if (!finite(value) || value > 1) throw new Error('Invalid civilization statistics.');
   }
+  validateDetails(state);
 }

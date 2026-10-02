@@ -1,14 +1,18 @@
 import { entitySeed, nameFor, random } from '../core/random.ts';
 import { initialStar } from '../core/stellar.ts';
 import { makeObject, logEvent } from '../core/universe.ts';
+import { BALANCE, GALAXY_BALANCE } from '../core/config.ts';
 import type { StarSystem, Universe } from '../core/types.ts';
 export function generateSystem(state: Universe, index: number, galaxyId = 'galaxy-0'): StarSystem {
   const id = `${galaxyId}-system-${index}`;
   if (state.systems[id]) return state.systems[id];
+  if (!Number.isInteger(index) || index < 0 || !state.galaxies[galaxyId]) throw new Error('Invalid procedural system address.');
+  if (Object.keys(state.systems).length >= GALAXY_BALANCE.maxDetailedSystems || Object.keys(state.objects).length > BALANCE.maxObjects - 4) throw new Error('The detailed simulation is full; distant sectors remain aggregate survey data.');
   const seed = entitySeed(state.seed, id), rng = random(seed);
   const star = makeObject(state.seed, `${id}-star`, 'star', null);
   star.systemId = id; star.createdAt = state.time; star.stellar = initialStar(index % 4 === 3 ? 8 + rng() * 3 : 0.4 + rng() * 2);
   star.mass = star.stellar.solarMass * 330000; star.color = star.stellar.class === 'blue' ? '#a8cfff' : star.stellar.class === 'red-dwarf' ? '#ffa88c' : '#ffd39b';
+  if (state.meta.activeModifiers.includes('unstable-stars')) star.stellar.lifespan *= 0.5;
   const angle = index * 2.399963, distance = 0.15 + Math.sqrt(index + 1) * 0.12;
   const system: StarSystem = { id, seed, name: star.name, starId: star.id, position: { x: Math.cos(angle) * distance, y: Math.sin(angle) * distance }, galaxyId };
   state.systems[id] = system; state.objects[star.id] = star;

@@ -2,6 +2,12 @@ import { test, expect } from '@playwright/test';
 import { createUniverse } from '../../src/core/universe.ts';
 import { advance } from '../../src/simulation/engine.ts';
 import { serialize, SAVE_KEY } from '../../src/persistence/save.ts';
+import { generateSystem } from '../../src/gameplay/systems.ts';
+import { discoverGalaxy } from '../../src/gameplay/galaxies.ts';
+import { foundCivilization } from '../../src/simulation/civilizations.ts';
+import { TECHNOLOGIES } from '../../src/core/technology.ts';
+import { findAnomaly } from '../../src/gameplay/discoveries.ts';
+import { simulateDiscoveries } from '../../src/simulation/discoveries.ts';
 test('first upgrade, selection, accessible settings and reload', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
@@ -17,6 +23,37 @@ test('first upgrade, selection, accessible settings and reload', async ({ page }
   await expect(page.locator('#rate-energy')).toHaveText('+4.0 /s');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(errors).toEqual([]);
+});
+test('atlas, codex, rename and rebirth remain usable in portrait and desktop', async ({ page }) => {
+  const state = createUniverse(12, Date.now()); generateSystem(state, 0); discoverGalaxy(state, 1);
+  state.totalUpgrades = 12; state.objects['planet-0'].planet!.habitability = 0.8; state.exploration.completed.orbital = 3;
+  const civ = foundCivilization(state, 'planet-0'); civ.technologies = Object.keys(TECHNOLOGIES); civ.level = 11;
+  state.megastructures.test = { id: 'test', type: 'dyson', civilizationId: civ.id, systemId: 'system-0', startedAt: 0, endsAt: 0, status: 'complete' };
+  findAnomaly(state, 'planet-0', 0); simulateDiscoveries(state);
+  await page.addInitScript(({ key, save }) => localStorage.setItem(key, save), { key: SAVE_KEY, save: serialize(state) });
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/'); await page.getByRole('button', { name: 'Galaxy', exact: true }).click();
+  await page.getByRole('button', { name: 'Atlas', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Cosmic atlas' })).toBeVisible();
+  await page.screenshot({ path: `artifacts/final-atlas-${test.info().project.name}.png`, fullPage: true });
+  await page.getByRole('button', { name: 'Discoveries', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Discovery Codex' })).toBeVisible();
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+  page.once('dialog', dialog => dialog.accept('My little world')); await page.getByRole('button', { name: 'Rename', exact: true }).click();
+  await page.getByRole('button', { name: 'Favorite', exact: true }).click(); await expect(page.getByRole('button', { name: 'Favorited', exact: true })).toBeVisible();
+  await page.getByLabel('Large text', { exact: true }).check();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.getByRole('button', { name: 'Rebirth', exact: true }).click(); await page.locator('#rebirth-seed').fill('777');
+  page.once('dialog', dialog => dialog.accept()); await page.getByRole('button', { name: /Rebirth · earn/ }).click();
+  await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
+  expect(await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).meta.runs, SAVE_KEY)).toBe(1);
+  expect(errors).toEqual([]);
+});
+test('a large offline return runs in a worker and restores the atlas', async ({ page }) => {
+  const state = createUniverse(42, Date.now() - 3600000); for (let i = 0; i < 9; i++) generateSystem(state, i);
+  await page.addInitScript(({ key, save }) => localStorage.setItem(key, save), { key: SAVE_KEY, save: serialize(state) });
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
+  await expect(page.locator('#age')).toContainText('1.0h'); await page.getByRole('button', { name: 'Atlas', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Cosmic atlas' })).toBeVisible(); expect(errors).toEqual([]);
 });
 test('evolved world exposes civilization history and working intervention', async ({ page }) => {
   const state = createUniverse(12, 0); advance(state, 7200); state.lastTimestamp = Date.now(); state.resources.energy = 10000; state.resources.matter = 10000;

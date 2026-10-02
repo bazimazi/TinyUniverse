@@ -2,7 +2,8 @@ import type { Universe } from '../core/types.ts';
 import { initialLife } from '../core/ecosystem.ts';
 import { initialStar } from '../core/stellar.ts';
 import { entitySeed } from '../core/random.ts';
-import { initialGalaxy } from '../gameplay/galaxies.ts';
+import { initialGalaxy } from '../core/galaxy.ts';
+import { initialMeta } from '../core/meta.ts';
 export function migrate(state: Universe): void {
   if (state.version < 2) {
     state.exploration = { job: null, completed: { orbital: 0, interstellar: 0, galactic: 0 } };
@@ -33,4 +34,5 @@ export function migrate(state: Universe): void {
     state.discoveries = {}; state.anomalies = {}; state.achievements = []; state.artifacts = [];
     state.records = { peakPopulation: 0, mostAdvanced: 0, mostWorlds: 1, mostSpecies: 0, longestCivilization: 0 };
   }
+  if (state.version < 10) { state.meta = initialMeta(); state.automation = { explore: false, develop: false, assist: false, research: false }; state.settings.music = false; state.settings.haptics = false; }
 }

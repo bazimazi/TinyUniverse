@@ -54,9 +54,9 @@ export class Scene {
     if (this.view === 'galaxy' || this.view === 'universe') { this.cosmos(state); return; }
     if (this.view === 'planet') {
       const radius = Math.min(w * 0.28, h * 0.29) * this.scale;
-      this.body(selected, w / 2, h * 0.46, radius, true, state.time);
+      this.body(selected, w / 2, h * 0.46, radius, true, state.settings.reducedMotion ? 0 : state.time);
       const parent = selected.parentId ? state.objects[selected.parentId] : null;
-      if (parent) this.body(parent, w * 0.85, h * 0.12, 13, false, state.time);
+      if (parent) this.body(parent, w * 0.85, h * 0.12, 13, false, state.settings.reducedMotion ? 0 : state.time);
     } else {
       const objects = Object.values(state.objects).filter(object => object.systemId === selected.systemId);
       const extent = Math.max(150, ...objects.map(object => object.orbit?.radius ?? 0));
@@ -67,9 +67,9 @@ export class Scene {
         if (object.orbit) {
           const parent = worldPosition(state, object.parentId!, state.settings.reducedMotion ? 0 : state.time);
           c.strokeStyle = '#b6d8ec20'; c.lineWidth = 1;
-          c.beginPath(); c.ellipse(w / 2 + parent.x * unit, h / 2 + parent.y * unit, object.orbit.radius * unit, object.orbit.radius * unit * Math.sqrt(1 - object.orbit.eccentricity ** 2), 0, 0, Math.PI * 2); c.stroke();
+          c.beginPath(); c.ellipse(w / 2 + (parent.x - object.orbit.radius * object.orbit.eccentricity) * unit, h / 2 + parent.y * unit, object.orbit.radius * unit, object.orbit.radius * unit * Math.sqrt(1 - object.orbit.eccentricity ** 2), 0, 0, Math.PI * 2); c.stroke();
         }
-        this.body(object, x, y, Math.max(5, object.radius * unit * 0.5), object.id === state.selectedId, state.time);
+        this.body(object, x, y, Math.max(5, object.radius * unit * 0.5), object.id === state.selectedId, state.settings.reducedMotion ? 0 : state.time);
       }
     }
   }
@@ -88,7 +88,8 @@ export class Scene {
       const x = w / 2 + dot.x * unit, y = h / 2 + dot.y * unit;
       c.fillStyle = '#aef0db'; c.shadowColor = '#aef0db'; c.shadowBlur = 14;
       c.beginPath(); c.arc(x, y, this.view === 'universe' ? 7 : 4, 0, Math.PI * 2); c.fill(); c.shadowBlur = 0;
-      c.font = '11px system-ui'; c.textAlign = 'center'; c.fillText(dot.name, x, y + 22);
+      c.font = '11px system-ui'; c.textAlign = 'center';
+      if (dots.length <= 12 || dot.id === state.systems[state.objects[state.selectedId].systemId].starId) c.fillText(dot.name, x, y + 22);
       this.hits.push({ id: dot.id, x, y, radius: 22 });
     }
   }
@@ -115,6 +116,7 @@ export class Scene {
       }
     }
     c.restore();
+    if (object.type === 'black-hole') { c.fillStyle = '#030509'; c.beginPath(); c.arc(x, y, r * 0.75, 0, Math.PI * 2); c.fill(); c.strokeStyle = object.color; c.lineWidth = 2; c.beginPath(); c.ellipse(x, y, r * 1.4, r * 0.4, -0.3, 0, Math.PI * 2); c.stroke(); }
     if (selected) { c.strokeStyle = '#9ee9d977'; c.lineWidth = 1; c.beginPath(); c.arc(x, y, r + 8, 0, Math.PI * 2); c.stroke(); }
     c.fillStyle = '#deebfa'; c.font = '12px system-ui'; c.textAlign = 'center';
     c.fillText(object.name, x, y + r + 28);

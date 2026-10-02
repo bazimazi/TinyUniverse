@@ -3,7 +3,8 @@ import { entitySeed, nameFor, random } from './random.ts';
 import type { CelestialObject, Universe } from './types.ts';
 import { initialLife } from './ecosystem.ts';
 import { initialStar } from './stellar.ts';
-import { initialGalaxy } from '../gameplay/galaxies.ts';
+import { initialGalaxy } from './galaxy.ts';
+import { initialMeta } from './meta.ts';
 export function makeObject(seed: number, id: string, type: CelestialObject['type'], parentId: string | null): CelestialObject {
   const objectSeed = entitySeed(seed, id);
   const rng = random(objectSeed);
@@ -34,7 +35,8 @@ export function createUniverse(seed = 1307, timestamp = Date.now()): Universe {
     galaxies: { 'galaxy-0': initialGalaxy(seed, 'galaxy-0') },
     relations: {}, megastructures: {},
     discoveries: {}, anomalies: {}, achievements: [], artifacts: [], records: { peakPopulation: 0, mostAdvanced: 0, mostWorlds: 1, mostSpecies: 0, longestCivilization: 0 },
-    settings: { reducedMotion: false, highContrast: false, largeText: false, sound: false }
+    meta: initialMeta(), automation: { explore: false, develop: false, assist: false, research: false },
+    settings: { reducedMotion: false, highContrast: false, largeText: false, sound: false, music: false, haptics: false }
   };
 }
 export function logEvent(state: Universe, type: string, targetId: string, title: string, detail = '', severity: 'info' | 'wonder' | 'danger' = 'info'): void {

@@ -17,9 +17,10 @@ export const ABILITIES: Record<string, { name: string; description: string; cost
 export function useAbility(state: Universe, id: string, targetId: string): ActionResult {
   const ability = ABILITIES[id], object = state.objects[targetId], civ = Object.values(state.civilizations).find(c => c.planetId === targetId && c.status === 'active');
   if (!ability || !object) return { ok: false, message: 'Choose a world to influence.' };
+  const captureHome = Object.values(state.objects).find(o => o.systemId === object.systemId && o.planet)?.id ?? 'planet-0';
   if (ability.requires && !hasTechnology(state, ability.requires)) return { ok: false, message: `Requires ${ability.requires} research.` };
   if (ability.target === 'planet' && !object.planet || ability.target === 'civilization' && !civ || ability.target === 'asteroid' && object.type !== 'asteroid') return { ok: false, message: `This ability needs a ${ability.target}.` };
-  if ((id === 'capture' && object.parentId === 'planet-0') || (id === 'inspire' && !civ!.researching)) return { ok: false, message: 'There is no opportunity for this intervention yet.' };
+  if ((id === 'capture' && object.parentId === captureHome) || (id === 'inspire' && !civ!.researching)) return { ok: false, message: 'There is no opportunity for this intervention yet.' };
   const key = `${id}:${targetId}`;
   if ((state.cooldowns[key] ?? 0) > state.time) return { ok: false, message: 'This influence is still recovering.' };
   if (!spend(state, ability.cost)) return { ok: false, message: 'Gather the resources for this influence.' };
@@ -36,7 +37,7 @@ export function useAbility(state: Universe, id: string, targetId: string): Actio
   }
   if (id === 'capture') {
     const parent = state.objects[object.parentId!]; parent.children = parent.children.filter(child => child !== targetId);
-    object.parentId = 'planet-0'; state.objects['planet-0'].children.push(targetId);
+    object.parentId = captureHome; state.objects[captureHome].children.push(targetId); object.systemId = state.objects[captureHome].systemId;
     object.orbit = { radius: 42, period: 32, eccentricity: 0.02, phase: 0 };
   }
   if (object.planet) object.planet.habitability = habitability(object, state);
@@ -44,4 +45,4 @@ export function useAbility(state: Universe, id: string, targetId: string): Actio
   else logEvent(state, 'Intervention', targetId, `${object.name}: ${ability.name}`, ability.description);
   return { ok: true, message: 'A small intervention. A different future.' };
 }
-export function maximumSpeed(state: Universe): number { return hasTechnology(state, 'interstellar') ? 25 : hasTechnology(state, 'fusion') ? 10 : hasTechnology(state, 'spaceflight') ? 5 : Object.keys(state.civilizations).length ? 2 : 1; }
+export function maximumSpeed(state: Universe): number { return state.meta.runs > 0 ? 100 : hasTechnology(state, 'interstellar') ? 25 : hasTechnology(state, 'fusion') ? 10 : hasTechnology(state, 'spaceflight') ? 5 : Object.keys(state.civilizations).length ? 2 : 1; }

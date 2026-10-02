@@ -24,10 +24,16 @@ export function deserialize(text: string): Universe {
 export function save(storage: StorageAdapter, state: Universe): void {
   const text = serialize(state);
   const previous = storage.getItem(SAVE_KEY);
+  let validPrimary = false;
   if (previous) {
-    try { deserialize(previous); storage.setItem(BACKUP_KEY, previous); } catch { /* Keep the last valid backup. */ }
+    try { deserialize(previous); validPrimary = true; storage.setItem(BACKUP_KEY, previous); } catch { /* Keep the last valid backup. */ }
   }
-  storage.setItem(SAVE_KEY, text);
+  try { storage.setItem(SAVE_KEY, text); }
+  catch (error) {
+    if (!validPrimary || !storage.removeItem) throw error;
+    // The primary is already verified. Reclaim backup space before retrying a larger snapshot.
+    storage.removeItem(BACKUP_KEY); storage.setItem(SAVE_KEY, text);
+  }
 }
 export function load(storage: StorageAdapter): { state: Universe | null; warning: string; corrupt: boolean } {
   let failed = false;

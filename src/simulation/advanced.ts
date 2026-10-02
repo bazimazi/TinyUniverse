@@ -10,11 +10,13 @@ export function mediate(state: Universe, relationId: string): { ok: boolean; mes
   relation.score = Math.min(100, relation.score + 30);
   return { ok: true, message: 'Shared knowledge has opened a path toward peace.' };
 }
-export function simulateAdvanced(state: Universe): void {
+export function completeStructures(state: Universe): void {
   for (const structure of Object.values(state.megastructures)) if (structure.status === 'building' && state.time >= structure.endsAt) {
     structure.status = 'complete'; const civ = state.civilizations[structure.civilizationId];
     civilizationEvent(state, civ, 'MegastructureBuilt', `${civ.name}: ${STRUCTURES[structure.type].name} complete`, STRUCTURES[structure.type].description, 'wonder');
   }
+}
+export function simulateAdvanced(state: Universe): void {
   if (Math.round(state.time) % ADVANCED_BALANCE.diplomacyInterval !== 0) return;
   const civilizations = Object.values(state.civilizations).filter(c => c.status === 'active' && c.technologies.includes('spaceflight'));
   let relationCount = Object.keys(state.relations).length;

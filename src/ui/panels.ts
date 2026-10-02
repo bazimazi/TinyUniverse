@@ -1,4 +1,4 @@
-﻿import { BALANCE, UPGRADES } from '../core/config.ts';
+import { BALANCE, UPGRADES } from '../core/config.ts';
 import { selectedObject } from '../core/universe.ts';
 import { canAfford, upgradeCost } from '../simulation/economy.ts';
 import { costText, duration, escape } from './format.ts';
@@ -9,14 +9,19 @@ import { explorationPanel } from './exploration.ts';
 import { atlasPanel } from './atlas.ts';
 import { advancedPanel } from './advanced.ts';
 import { discoveriesPanel } from './discoveries.ts';
-export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'atlas' | 'discoveries' | 'events' | 'settings';
-export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', influence: 'Influence', atlas: 'Atlas', discoveries: 'Discoveries', events: 'Journal', settings: 'Settings' };
+import { offlineCap } from '../core/meta.ts';
+import { hasTechnology } from '../simulation/civilizations.ts';
+import { journalPanel } from './journal.ts';
+import { prestigePanel } from './prestige.ts';
+export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'atlas' | 'discoveries' | 'prestige' | 'events' | 'settings';
+export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', influence: 'Influence', atlas: 'Atlas', discoveries: 'Discoveries', prestige: 'Rebirth', events: 'Journal', settings: 'Settings' };
 export function button(label: string, action: string, value = '', disabled = false, secondary = false): string {
   return `<button class="${secondary ? 'secondary' : 'action'}" data-action="${action}" data-value="${escape(value)}" ${disabled ? 'disabled' : ''}>${escape(label)}</button>`;
 }
 export function metric(label: string, value: string): string { return `<div class="metric"><span>${escape(label)}</span><strong>${escape(value)}</strong></div>`; }
 export function panelContent(state: Universe, panel: Panel): string {
   const object = selectedObject(state);
+  if (panel === 'prestige') return prestigePanel(state);
   if (panel === 'discoveries') return discoveriesPanel(state);
   if (panel === 'atlas') return atlasPanel(state);
   if (panel === 'influence') return influencePanel(state);
@@ -33,15 +38,23 @@ export function panelContent(state: Universe, panel: Panel): string {
         return `<article class="card"><div class="card-title"><strong>${upgrade.name}</strong><span class="badge">${level}/${BALANCE.maxUpgrade}</span></div><p>${upgrade.description}</p>${button(level >= BALANCE.maxUpgrade ? 'Complete' : costText(cost), 'upgrade', id, level >= BALANCE.maxUpgrade || !canAfford(state, cost))}</article>`;
       }).join('')}</div>`;
   }
-  if (panel === 'events') return `<div class="eyebrow">A HISTORY IN THE MAKING</div><h2>Universe journal</h2>${state.events.length ? `<ol class="timeline">${[...state.events].reverse().slice(0, 50).map(event => `<li class="${event.severity}"><small>${duration(event.time)}</small><strong>${escape(event.title)}</strong><p>${escape(event.detail)}</p></li>`).join('')}</ol>` : '<p>Your universe is young. Its story begins with your first upgrade.</p>'}`;
+  if (panel === 'events') return journalPanel(state);
   return `<div class="eyebrow">MAKE SPACE YOUR OWN</div><h2>Settings & saves</h2><div class="cards">
-    <article class="card"><h3>Accessibility</h3>${(['reducedMotion', 'highContrast', 'largeText', 'sound'] as const).map(id => `<label class="toggle"><input type="checkbox" data-setting="${id}" ${state.settings[id] ? 'checked' : ''}>${({ reducedMotion: 'Reduced motion', highContrast: 'High contrast', largeText: 'Large text', sound: 'Sound' })[id]}</label>`).join('')}</article>
-    <article class="card"><h3>Your universe</h3><p>Seed ${state.seed} · ${duration(state.time)} old. Progress continues for up to 24 hours while you are away.</p><div class="button-row">${button('Save now', 'save')}${button('Export save', 'export', '', false, true)}</div><label class="file-label">Import a save<input id="import-file" type="file" accept=".json,application/json"></label><p class="muted">Import replaces the current universe after a valid save is checked.</p>${button('Start fresh', 'reset', '', false, true)}</article>
+    <article class="card"><h3>${escape(object.name)}</h3><div class="button-row">${button('Rename', 'rename', '', false, true)}${button(object.favorite ? 'Favorited' : 'Favorite', 'favorite', '', false, true)}</div></article><article class="card"><h3>Accessibility</h3>${(['reducedMotion', 'highContrast', 'largeText', 'sound', 'music', 'haptics'] as const).map(id => `<label class="toggle"><input type="checkbox" data-setting="${id}" ${state.settings[id] ? 'checked' : ''}>${({ reducedMotion: 'Reduced motion', highContrast: 'High contrast', largeText: 'Large text', sound: 'Discovery sounds', music: 'Ambient music', haptics: 'Haptics' })[id]}</label>`).join('')}</article>
+    <article class="card"><h3>Your universe</h3><p>Seed ${state.seed} · ${duration(state.time)} old. Progress continues for up to ${duration(offlineCap(state))} while you are away. Live time controls accelerate active play.</p><div class="button-row">${button('Save now', 'save')}${button('Export save', 'export', '', false, true)}</div><label class="file-label">Import a save<input id="import-file" type="file" accept=".json,application/json"></label><p class="muted">Import replaces the current universe after a valid save is checked.</p>${button('Start fresh', 'reset', '', false, true)}</article>
   ${import.meta.env?.DEV ? `<article class="card"><details><summary>Developer tools</summary><p>Selected: ${escape(object.id)} · ${object.type} · mass ${object.mass.toFixed(2)} · time ${duration(state.time)}</p><div class="button-row">${[['resources', 'Add resources'], ['time', 'Advance 1h'], ['planet', 'Spawn planet'], ['civilization', 'Spawn civilization'], ['technology', 'Unlock technology'], ['kill', 'Collapse civilization'], ['event', 'Trigger event']].map(([value, label]) => button(label, 'debug', value, false, true)).join('')}</div><pre>${escape(JSON.stringify({ id: object.id, parent: object.parentId, orbit: object.orbit, environment: object.planet }, null, 2))}</pre></details></article>` : ''}</div>`;
 }
 export function nextGoal(state: Universe): { title: string; detail: string } {
   if (state.totalUpgrades === 0) return { title: 'Catch your first starlight', detail: 'Buy Solar collection below. Your planet will produce more energy.' };
+  if (state.totalUpgrades < 2) return { title: 'Build your first little probe', detail: 'Buy a second upgrade to unlock orbital exploration.' };
   if (state.objects['planet-0'].planet!.habitability < 0.7) return { title: 'Make room for complex life', detail: 'Stabilize the atmosphere and expand the oceans to reach 70% habitability.' };
   if (state.exploration.completed.orbital === 0) return { title: 'Find your first companion', detail: 'Open Explore and send a probe beyond your world.' };
+  if (Object.keys(state.civilizations).length === 0) return { title: 'Wait for the first curious minds', detail: 'Nurture the ecosystem. Intelligent life emerges from healthy worlds.' };
+  if (!hasTechnology(state, 'spaceflight')) return { title: 'A civilization is finding its way', detail: 'Follow its history in Life. Research and gentle influence will open spaceflight.' };
+  if (Object.keys(state.systems).length === 1) return { title: 'Reach another star', detail: 'An interstellar expedition in Explore will discover new worlds.' };
+  if (!hasTechnology(state, 'interstellar')) return { title: 'Build a bridge between worlds', detail: 'Fusion, AI and gravity engineering open interstellar civilization.' };
+  if (Object.keys(state.galaxies).length === 1) return { title: 'Beyond the galactic horizon', detail: 'Launch a galactic expedition and chart a new reach.' };
+  if (!Object.values(state.megastructures).some(s => s.type === 'dyson' && s.status === 'complete')) return { title: 'Harvest the light of a star', detail: 'Guide a civilization toward Dyson structures and complete its first swarm.' };
+  if (state.meta.runs === 0) return { title: 'Carry your discoveries into a new universe', detail: 'Rebirth keeps the things you learned and unlocks permanent universal laws.' };
   return { title: 'A world of possibilities', detail: 'Build a thriving ecosystem. Your universe keeps growing while you are away.' };
 }

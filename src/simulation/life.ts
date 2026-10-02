@@ -2,6 +2,7 @@ import { BALANCE } from '../core/config.ts';
 import { random, entitySeed } from '../core/random.ts';
 import { logEvent } from '../core/universe.ts';
 import { updateInterval } from '../core/tiers.ts';
+import { evolutionMultiplier } from '../core/meta.ts';
 import type { CelestialObject, Ecosystem, Universe } from '../core/types.ts';
 export function habitability(object: CelestialObject, state: Universe): number {
   const p = object.planet!;
@@ -18,7 +19,7 @@ export function simulateLife(state: Universe): void {
     object.lastLifeUpdate = state.time;
     p.habitability = habitability(object, state);
     const suitability = p.habitability * Math.min(1, p.water * 2);
-    if (p.habitability >= BALANCE.life.minimumHabitability) life.progress += seconds * suitability * (1 + object.upgrades.biodiversity * 0.15);
+    if (p.habitability >= BALANCE.life.minimumHabitability) life.progress += seconds * suitability * (1 + object.upgrades.biodiversity * 0.15) * evolutionMultiplier(state);
     const next = life.progress >= BALANCE.life.intelligentAt ? 'intelligent' : life.progress >= BALANCE.life.complexAt ? 'complex' : life.progress >= BALANCE.life.simpleAt ? 'simple' : 'chemistry';
     if (next !== life.stage) {
       life.stage = next;

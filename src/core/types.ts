@@ -31,7 +31,9 @@ export interface GameEvent {
   id: string; type: string; time: number; targetId: string; title: string; detail: string;
   severity: 'info' | 'wonder' | 'danger';
 }
-export interface Settings { reducedMotion: boolean; highContrast: boolean; largeText: boolean; sound: boolean }
+export interface Settings { reducedMotion: boolean; highContrast: boolean; largeText: boolean; sound: boolean; music: boolean; haptics: boolean }
+export type LawId = 'production' | 'evolution' | 'research' | 'offline';
+export interface MetaProgression { runs: number; cosmicKnowledge: number; earnedKnowledge: number; laws: Record<LawId, number>; activeModifiers: string[]; nextModifiers: string[] }
 export type Domain = 'biology' | 'physics' | 'energy' | 'computing' | 'materials' | 'space' | 'social' | 'gravity' | 'quantum';
 export interface Civilization {
   id: string; seed: number; name: string; planetId: string; foundedAt: number; population: number;
@@ -46,7 +48,8 @@ export interface Relation { id: string; a: string; b: string; score: number; sta
 export type StructureType = 'habitat' | 'dyson' | 'wormhole' | 'black-hole-generator';
 export interface Megastructure { id: string; type: StructureType; civilizationId: string; systemId: string; startedAt: number; endsAt: number; status: 'building' | 'complete' }
 export interface Discovery { id: string; title: string; category: 'celestial' | 'biological' | 'civilization' | 'technology' | 'anomaly' | 'cosmic' | 'historical'; time: number; sourceId: string; detail: string; rarity: number }
-export interface Anomaly { id: string; seed: number; targetId: string; kind: 'ancient-ruins' | 'time-echo' | 'strange-signal' | 'artificial-moon'; stage: number; status: 'found' | 'investigating' | 'choice' | 'resolved'; choice: 'preserve' | 'decode' | null; nextAt: number | null }
+export const ANOMALY_KINDS = ['ancient-ruins', 'time-echo', 'strange-signal', 'artificial-moon', 'dimensional-rift', 'artificial-universe', 'self-replicating-probe'] as const;
+export interface Anomaly { id: string; seed: number; targetId: string; kind: typeof ANOMALY_KINDS[number]; stage: number; status: 'found' | 'investigating' | 'choice' | 'resolved'; choice: 'preserve' | 'decode' | null; nextAt: number | null }
 export interface Records { peakPopulation: number; mostAdvanced: number; mostWorlds: number; mostSpecies: number; longestCivilization: number }
 export interface Universe {
   version: number; seed: number; time: number; lastTimestamp: number; selectedId: string;
@@ -57,6 +60,7 @@ export interface Universe {
   galaxies: Record<string, Galaxy>;
   relations: Record<string, Relation>; megastructures: Record<string, Megastructure>;
   discoveries: Record<string, Discovery>; anomalies: Record<string, Anomaly>; achievements: string[]; artifacts: string[]; records: Records;
+  meta: MetaProgression; automation: { explore: boolean; develop: boolean; assist: boolean; research: boolean };
 }
 export interface ActionResult { ok: boolean; message: string }
-export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void }
+export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem?(key: string): void }

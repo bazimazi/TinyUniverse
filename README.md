@@ -1,6 +1,8 @@
 # Tiny Universe
 
-A mobile-first idle universe sandbox. Begin with Aurelia, improve its environment, and watch your universe grow. The simulation is deterministic and runs independently of the browser UI.
+A mobile-first idle exploration and civilization sandbox. Begin with Aurelia, develop its environment, discover companion worlds, watch independent cultures emerge, explore galaxies and carry your discoveries into another Big Bang.
+
+All ten development phases are implemented in separate commits. The simulation runs independently of rendering and uses deterministic seeds, bounded detailed worlds and aggregate distant populations.
 
 Requires Node.js 24 or newer.
 
@@ -9,12 +11,17 @@ npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. For a production build, run `npm run build`, then `npm run preview`. Browser saves are local to the origin; use Settings → Export save for portable backups.
+Open the local URL printed by Vite (normally http://127.0.0.1:4186). Buy your first Solar collection upgrade, then a second upgrade to unlock exploration. Navigation reveals new systems as you progress. Follow civilizations in Life, influence worlds, collect discoveries and complete a Dyson swarm to unlock rebirth.
 
 ```sh
 npm run check
 npx playwright install chromium
 npm run test:browser
+npm run test:production
 ```
 
-See [implementation and phase validation](docs/IMPLEMENTATION.md), [design research](docs/RESEARCH.md), and the [original product plan](docs/PRODUCT_PLAN.md).
+For a production build, run `npm run build`, then `npm run preview`. Deploy `dist` to a static HTTPS host. After its first online load, the production app caches its assets and can launch offline. Browser saves belong to the current origin; Settings > Export save creates a portable backup. Initial offline progress is capped at 24 hours, with permanent upgrades extending it to seven days.
+
+Development builds include an inspector and simulation tools in Settings. Accessibility controls include reduced motion, large text, high contrast, optional music/discovery sounds and haptics. No network telemetry or monetization is included.
+
+See [phase commits and validation](docs/IMPLEMENTATION.md), [architecture and limits](docs/ARCHITECTURE.md), [design research](docs/RESEARCH.md), and the [original product plan](docs/PRODUCT_PLAN.md).

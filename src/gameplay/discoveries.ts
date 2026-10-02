@@ -3,6 +3,7 @@ import { entitySeed, nameFor, random } from '../core/random.ts';
 import { logEvent } from '../core/universe.ts';
 import { spend } from '../simulation/economy.ts';
 import type { ActionResult, Anomaly, Discovery, Universe } from '../core/types.ts';
+import { ANOMALY_KINDS } from '../core/types.ts';
 export function discover(state: Universe, discovery: Omit<Discovery, 'time'>): void {
   if (state.discoveries[discovery.id]) return;
   state.discoveries[discovery.id] = { ...discovery, time: state.time };
@@ -11,10 +12,11 @@ export function findAnomaly(state: Universe, targetId: string, index: number): v
   if (Object.keys(state.anomalies).length >= DISCOVERY_BALANCE.maxAnomalies) return;
   const id = `signal-${state.seed}-${targetId}-${index}`, seed = entitySeed(state.seed, id), rng = random(seed);
   if (state.anomalies[id] || (index > 0 && rng() > DISCOVERY_BALANCE.anomalyChance)) return;
-  const kind = (['ancient-ruins', 'time-echo', 'strange-signal', 'artificial-moon'] as const)[Math.floor(rng() * 4)];
+  const kinds = state.meta.runs >= 3 ? ANOMALY_KINDS : ANOMALY_KINDS.slice(0, 4);
+  const kind = kinds[Math.floor(rng() * kinds.length)];
   const anomaly: Anomaly = { id, seed, targetId, kind, stage: 0, status: 'found', choice: null, nextAt: null };
   state.anomalies[id] = anomaly;
-  discover(state, { id, title: `${nameFor(seed)} ${kind.replace('-', ' ')}`, category: 'anomaly', sourceId: targetId, detail: 'An unexplained signal waits for a careful investigation.', rarity: 1 + Math.floor(rng() * 4) });
+  discover(state, { id, title: `${nameFor(seed)} ${kind.replaceAll('-', ' ')}`, category: 'anomaly', sourceId: targetId, detail: 'An unexplained signal waits for a careful investigation.', rarity: Math.min(20, 1 + Math.floor(rng() * 4) + Math.floor(Math.log2(state.meta.runs + 1))) });
   logEvent(state, 'AnomalyDiscovered', targetId, `An unexplained ${kind.replace('-', ' ')}`, 'Investigate it in Discoveries.', 'wonder');
 }
 export function investigate(state: Universe, id: string, choice: 'preserve' | 'decode' | null = null): ActionResult {
@@ -34,7 +36,7 @@ export function advanceAnomalies(state: Universe): void {
       anomaly.stage = 1; anomaly.status = 'choice';
       logEvent(state, 'SignalDecoded', anomaly.targetId, 'The signal has a history', 'Preserve its living legacy, or decode its technology? Your choice changes the reward.', 'wonder');
     } else {
-      anomaly.stage = 3; anomaly.status = 'resolved'; state.resources.knowledge += DISCOVERY_BALANCE.rewardKnowledge;
+      anomaly.stage = 3; anomaly.status = 'resolved'; state.resources.knowledge += DISCOVERY_BALANCE.rewardKnowledge * (1 + Math.log2(state.meta.runs + 1));
       const object = state.objects[anomaly.targetId], civ = Object.values(state.civilizations).find(c => c.planetId === anomaly.targetId && c.status === 'active');
       if (anomaly.choice === 'preserve') { if (object.life) object.life.progress += 180; state.artifacts.push(`living-archive:${anomaly.seed}`); }
       else { state.resources.exotic += DISCOVERY_BALANCE.rewardExotic; if (civ) civ.researchPoints += 500; state.artifacts.push(`star-map:${anomaly.seed}`); }
