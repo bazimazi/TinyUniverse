@@ -1,6 +1,7 @@
 import { BALANCE, UPGRADES } from '../core/config.ts';
 import { logEvent } from '../core/universe.ts';
 import { RESOURCE_IDS } from '../core/types.ts';
+import { habitability } from './life.ts';
 import type { ActionResult, CelestialObject, Cost, Resources, Universe, UpgradeId } from '../core/types.ts';
 export function rates(state: Universe): Resources {
   const result: Resources = { energy: 0, matter: 0, minerals: 0, biology: 0 };
@@ -10,7 +11,7 @@ export function rates(state: Universe): Resources {
     result.energy += BALANCE.production.energy + object.upgrades.solar * 2;
     result.matter += BALANCE.production.matter;
     result.minerals += BALANCE.production.minerals + object.upgrades.mining * 1.5;
-    result.biology += BALANCE.production.biology + object.upgrades.oceans * 0.08 + object.upgrades.biodiversity * 0.2;
+    result.biology += BALANCE.production.biology + object.upgrades.oceans * 0.08 + object.upgrades.biodiversity * 0.2 + object.planet.biodiversity * 0.3;
   }
   return result;
 }
@@ -40,7 +41,7 @@ export function buyUpgrade(state: Universe, objectId: string, id: UpgradeId): Ac
   if (id === 'atmosphere') p.atmosphere = Math.min(1, p.atmosphere + 0.08);
   if (id === 'oceans') p.water = Math.min(1, p.water + 0.07);
   if (id === 'biodiversity') p.biodiversity = Math.min(1, p.biodiversity + 0.06);
-  p.habitability = Math.min(1, 0.2 + p.atmosphere * 0.3 + p.water * 0.3 + p.magneticField * 0.2);
+  p.habitability = habitability(object, state);
   logEvent(state, 'UpgradePurchased', objectId, `${object.name}: ${UPGRADES[id].name}`, `Level ${object.upgrades[id]}`);
   return { ok: true, message: `${UPGRADES[id].name} improved.` };
 }

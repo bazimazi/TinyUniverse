@@ -16,6 +16,12 @@ Validation: build, eight headless tests including deterministic discoveries and 
 
 ## Remaining phase order
 
+## Phase 3 — Life
+
+Implemented aggregate ecological populations, condition-driven evolution, biodiversity, food-chain feedback and deterministic planetary climate events. A 30-second decision cadence is shared by live and offline simulation; production integrates analytically between decisions. Cold/dry worlds develop differently from sheltered worlds.
+
+Validation: build, ten headless tests (including 1h live/offline equivalence and hostile environments), bounded 24h performance and responsive browser checks pass.
+
 2. Celestial expansion: moons, planets, asteroids, exploration and selection.
 3. Life: ecosystems, biodiversity, evolution and planetary events.
 4. Civilization: population, traits, technology, history and collapse.

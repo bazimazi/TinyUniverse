@@ -12,6 +12,7 @@ export function assertUniverse(state: Universe): void {
     if (object.parentId && !state.objects[object.parentId]) throw new Error('Missing orbit parent.');
     if (object.orbit && (!finite(object.orbit.radius, 1) || !finite(object.orbit.period, 1) || !finite(object.orbit.eccentricity) || object.orbit.eccentricity >= 1 || !finite(object.orbit.phase))) throw new Error('Invalid orbit.');
     if (object.planet && Object.values(object.planet).some(value => !finite(value))) throw new Error('Invalid planet environment.');
+    if (object.planet && (!object.life || !['chemistry', 'simple', 'complex', 'intelligent'].includes(object.life.stage) || !finite(object.life.progress) || !finite(object.life.species) || Object.values(object.life.populations).some(value => !finite(value) || value > 1))) throw new Error('Invalid ecosystem.');
     const ancestors = new Set<string>([id]);
     let parent = object.parentId;
     while (parent) {

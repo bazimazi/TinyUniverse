@@ -9,11 +9,16 @@ export interface PlanetProperties {
   temperature: number; atmosphere: number; water: number; magneticField: number;
   habitability: number; biodiversity: number; gravity: number;
 }
+export type LifeStage = 'chemistry' | 'simple' | 'complex' | 'intelligent';
+export interface Ecosystem {
+  stage: LifeStage; progress: number; species: number;
+  populations: { microorganisms: number; plants: number; herbivores: number; predators: number; aquatic: number; flying: number };
+}
 export interface CelestialObject {
   id: string; seed: number; type: ObjectType; name: string; mass: number; radius: number;
   createdAt: number; parentId: string | null; children: string[]; orbit: Orbit | null;
   color: string; upgrades: Record<UpgradeId, number>; planet: PlanetProperties | null;
-  favorite: boolean; mined: boolean; deposit: number;
+  favorite: boolean; mined: boolean; deposit: number; life: Ecosystem | null;
 }
 export type ExploreKind = 'orbital';
 export interface ExplorationJob { kind: ExploreKind; targetId: string; startedAt: number; endsAt: number; index: number }
