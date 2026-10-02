@@ -57,7 +57,8 @@ export class Scene {
       const parent = selected.parentId ? state.objects[selected.parentId] : null;
       if (parent) this.body(parent, w * 0.85, h * 0.12, 13, false, state.time);
     } else {
-      const unit = Math.min(w, h) / 350 * this.scale;
+      const extent = Math.max(150, ...Object.values(state.objects).map(object => object.orbit?.radius ?? 0));
+      const unit = Math.min(w, h) / (extent * 2.5) * this.scale;
       for (const object of Object.values(state.objects)) {
         const pos = worldPosition(state, object.id, state.settings.reducedMotion ? 0 : state.time);
         const x = w / 2 + pos.x * unit, y = h / 2 + pos.y * unit;

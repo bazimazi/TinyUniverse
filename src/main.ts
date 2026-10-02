@@ -8,7 +8,8 @@ import { advance, resumeOffline } from './simulation/engine.ts';
 import { deserialize, load, save, serialize, SAVE_KEY } from './persistence/save.ts';
 import { Scene } from './rendering/scene.ts';
 import { duration, number } from './ui/format.ts';
-import { nextGoal, panelContent } from './ui/panels.ts';
+import { nextGoal, panelContent, PANEL_LABELS } from './ui/panels.ts';
+import { mineAsteroid, startExploration } from './gameplay/exploration.ts';
 import type { Panel } from './ui/panels.ts';
 
 let loaded: ReturnType<typeof load>;
@@ -25,7 +26,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <canvas id="universe" aria-label="Interactive celestial scene. Use the world list to select objects with a keyboard." role="img"></canvas>
   <div class="scene-controls"><button class="secondary" data-action="view" data-value="planet">Planet</button><button class="secondary" data-action="view" data-value="system">System</button><button class="icon-button" data-action="zoom" data-value="1.2" aria-label="Zoom in">+</button><button class="icon-button" data-action="zoom" data-value="0.8" aria-label="Zoom out">−</button></div>
   <div id="goal" class="goal"></div><div id="worlds" class="worlds" aria-label="Select a celestial object"></div></section>
-  <section class="dashboard"><nav aria-label="Game panels"><button data-action="tab" data-value="develop">Develop</button><button data-action="tab" data-value="events">Journal</button><button data-action="tab" data-value="settings">Settings</button></nav><div id="panel"></div></section></main>
+  <section class="dashboard"><nav aria-label="Game panels">${Object.entries(PANEL_LABELS).map(([id, label]) => `<button data-action="tab" data-value="${id}">${label}</button>`).join('')}</nav><div id="panel"></div></section></main>
   <footer>A little world. A living universe. <span id="save-status">Autosave enabled</span></footer><div id="toast" role="status" aria-live="polite"></div>`;
 const scene = new Scene(document.querySelector<HTMLCanvasElement>('#universe')!, id => { state.selectedId = id; lastPanel = ''; render(); });
 const content = document.querySelector<HTMLDivElement>('#panel')!;
@@ -84,6 +85,8 @@ document.addEventListener('click', event => {
   if (action === 'view') scene.view = value as Scene['view'];
   if (action === 'zoom') scene.zoom(Number(value));
   if (action === 'upgrade') toast(buyUpgrade(state, state.selectedId, value as UpgradeId).message);
+  if (action === 'explore') toast(startExploration(state).message);
+  if (action === 'mine') toast(mineAsteroid(state, value).message);
   if (action === 'save') persist(true);
   if (action === 'export') {
     const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([serialize(state)], { type: 'application/json' }));

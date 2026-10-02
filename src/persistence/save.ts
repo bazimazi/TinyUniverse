@@ -1,6 +1,7 @@
 import { SAVE_VERSION } from '../core/config.ts';
 import { assertUniverse } from '../core/invariants.ts';
 import { hash } from '../core/random.ts';
+import { migrate } from './migrations.ts';
 import type { StorageAdapter, Universe } from '../core/types.ts';
 export const SAVE_KEY = 'tiny-universe.save';
 export const BACKUP_KEY = `${SAVE_KEY}.backup`;
@@ -15,6 +16,7 @@ export function deserialize(text: string): Universe {
   if (envelope.format !== 'TinyUniverse' || typeof envelope.payload !== 'string' || hash(envelope.payload) !== envelope.checksum) throw new Error('Save file is incomplete or corrupted.');
   const state = JSON.parse(envelope.payload) as Universe;
   if (!Number.isInteger(state.version) || state.version < 1 || state.version > SAVE_VERSION) throw new Error('Unsupported save version.');
+  migrate(state);
   assertUniverse(state);
   state.version = SAVE_VERSION;
   return state;

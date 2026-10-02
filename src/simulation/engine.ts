@@ -1,10 +1,16 @@
 import { BALANCE } from '../core/config.ts';
 import { produce } from './economy.ts';
+import { completeExploration } from '../gameplay/exploration.ts';
 import type { Universe } from '../core/types.ts';
 export function advance(state: Universe, seconds: number): void {
   if (!Number.isFinite(seconds) || seconds < 0) throw new Error('Elapsed time must be finite and nonnegative.');
-  produce(state, seconds);
-  state.time += seconds;
+  const end = state.time + seconds;
+  while (state.time < end) {
+    const boundary = Math.min(end, state.exploration.job?.endsAt ?? end);
+    const step = Math.max(0, boundary - state.time);
+    produce(state, step); state.time = boundary;
+    completeExploration(state);
+  }
 }
 export function resumeOffline(state: Universe, timestamp: number): { seconds: number; capped: boolean } {
   const elapsed = Math.max(0, (timestamp - state.lastTimestamp) / 1000);

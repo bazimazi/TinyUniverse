@@ -5,6 +5,7 @@ import type { ActionResult, CelestialObject, Cost, Resources, Universe, UpgradeI
 export function rates(state: Universe): Resources {
   const result: Resources = { energy: 0, matter: 0, minerals: 0, biology: 0 };
   for (const object of Object.values(state.objects)) {
+    if (object.mined) result.minerals += BALANCE.asteroidYield;
     if (!object.planet) continue;
     result.energy += BALANCE.production.energy + object.upgrades.solar * 2;
     result.matter += BALANCE.production.matter;

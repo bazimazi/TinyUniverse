@@ -3,13 +3,18 @@ import { selectedObject } from '../core/universe.ts';
 import { canAfford, upgradeCost } from '../simulation/economy.ts';
 import { costText, duration, escape } from './format.ts';
 import type { Universe, UpgradeId } from '../core/types.ts';
-export type Panel = 'develop' | 'events' | 'settings';
+export type Panel = 'develop' | 'explore' | 'events' | 'settings';
+export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', events: 'Journal', settings: 'Settings' };
 export function button(label: string, action: string, value = '', disabled = false, secondary = false): string {
   return `<button class="${secondary ? 'secondary' : 'action'}" data-action="${action}" data-value="${escape(value)}" ${disabled ? 'disabled' : ''}>${escape(label)}</button>`;
 }
 export function metric(label: string, value: string): string { return `<div class="metric"><span>${escape(label)}</span><strong>${escape(value)}</strong></div>`; }
 export function panelContent(state: Universe, panel: Panel): string {
   const object = selectedObject(state);
+  if (panel === 'explore') {
+    const job = state.exploration.job;
+    return `<div class="eyebrow">WHAT LIES JUST BEYOND?</div><h2>A little farther</h2><p>Survey nearby space. Discover moons, new worlds and asteroids. Each expedition continues while you are away.</p><article class="card"><h3>Orbital expedition</h3><p>${state.totalUpgrades < 2 ? 'Build two upgrades to launch your first probe.' : 'The next signal might be a companion world, a new planet, or a rich asteroid.'}</p>${job ? `<progress aria-label="Expedition progress" value="${state.time - job.startedAt}" max="${job.endsAt - job.startedAt}"></progress><p>Returning in ${duration(Math.max(0, job.endsAt - state.time))}</p>` : button(`Launch · ${costText(BALANCE.exploration.cost)}`, 'explore', '', state.totalUpgrades < 2 || !canAfford(state, BALANCE.exploration.cost))}</article><h3>Your discoveries</h3><div class="cards">${Object.values(state.objects).filter(o => o.id !== 'planet-0' && o.type !== 'star').map(o => `<article class="card"><div class="card-title"><strong>${escape(o.name)}</strong><span class="badge">${o.type}</span></div><p>${o.type === 'moon' ? 'Tides and a steadier climate for its parent world.' : o.type === 'asteroid' ? `${o.mined ? 'Mining outpost active' : 'An untouched deposit'} · ${Math.floor(o.deposit)} minerals` : 'A new world to develop.'}</p><div class="button-row">${button('Observe', 'select', o.id, false, true)}${o.type === 'asteroid' && !o.mined ? button('Mine · 60 energy / 25 matter', 'mine', o.id, !canAfford(state, { energy: 60, matter: 25 })) : ''}</div></article>`).join('') || '<p>Your probe has yet to discover another body.</p>'}</div>`;
+  }
   if (panel === 'develop') {
     if (!object.planet) return `<h2>${escape(object.name)}</h2><p>A steady light for the worlds around it. Select a planet to begin developing.</p>`;
     return `<div class="eyebrow">YOUR FIRST WORLD</div><h2>${escape(object.name)}</h2><p class="muted">Small beginnings. Endless possibilities.</p>
@@ -28,5 +33,6 @@ export function panelContent(state: Universe, panel: Panel): string {
 export function nextGoal(state: Universe): { title: string; detail: string } {
   if (state.totalUpgrades === 0) return { title: 'Catch your first starlight', detail: 'Buy Solar collection below. Your planet will produce more energy.' };
   if (state.objects['planet-0'].planet!.habitability < 0.7) return { title: 'Make room for complex life', detail: 'Stabilize the atmosphere and expand the oceans to reach 70% habitability.' };
+  if (state.exploration.completed.orbital === 0) return { title: 'Find your first companion', detail: 'Open Explore and send a probe beyond your world.' };
   return { title: 'A world of possibilities', detail: 'Build a thriving ecosystem. Your universe keeps growing while you are away.' };
 }

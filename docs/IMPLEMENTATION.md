@@ -8,6 +8,12 @@ Implemented a seeded world and star, Keplerian camera view, four resources, five
 
 Validation: `npm run check`; Chromium desktop and 390px portrait smoke tests. Future phases must retain these checks and add domain-specific tests. Performance target is a sub-2s 24h headless simulation; browser FPS requires measurement on actual target mobile hardware.
 
+## Phase 2 — Celestial expansion
+
+Implemented gated 45-second orbital expeditions, deterministic moons/planets/asteroids, nested orbits, climate benefits from moons, mineral outposts, selection and a fitted system camera. Exploration completion splits idle production at its exact deadline so newly discovered planets produce only after discovery. Phase 1 saves migrate automatically.
+
+Validation: build, eight headless tests including deterministic discoveries and migration, 24h benchmark and desktop/mobile smoke tests pass.
+
 ## Remaining phase order
 
 2. Celestial expansion: moons, planets, asteroids, exploration and selection.

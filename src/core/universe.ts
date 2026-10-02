@@ -11,7 +11,7 @@ export function makeObject(seed: number, id: string, type: CelestialObject['type
     color: type === 'star' ? '#ffd39b' : '#6cdcc0',
     upgrades: { solar: 0, mining: 0, atmosphere: 0, oceans: 0, biodiversity: 0 },
     planet: type === 'planet' ? { temperature: 288, atmosphere: 0.45, water: 0.45, magneticField: 0.55, habitability: 0.52, biodiversity: 0.05, gravity: 1 } : null,
-    favorite: false
+    favorite: false, mined: false, deposit: type === 'asteroid' ? 100 + rng() * 200 : 0
   };
 }
 export function createUniverse(seed = 1307, timestamp = Date.now()): Universe {
@@ -24,6 +24,7 @@ export function createUniverse(seed = 1307, timestamp = Date.now()): Universe {
     version: SAVE_VERSION, seed: seed >>> 0, time: 0, lastTimestamp: timestamp, selectedId: planet.id,
     resources: { energy: 25, matter: 12, minerals: 20, biology: 0 },
     objects: { [star.id]: star, [planet.id]: planet }, events: [], totalUpgrades: 0,
+    exploration: { job: null, completed: { orbital: 0 } },
     settings: { reducedMotion: false, highContrast: false, largeText: false, sound: false }
   };
 }
