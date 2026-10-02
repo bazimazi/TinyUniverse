@@ -32,6 +32,12 @@ Implemented autonomous seeded cultures and governments, trait/domain-weighted re
 
 Validation: formation, population growth, technology, history, collapse and live/offline determinism tests; build, performance and portrait/desktop smoke checks.
 5. Influence: environment, gravity, gifts and civilization interventions.
+
+## Phase 5 — Player influence
+
+Implemented nine costed abilities with per-target cooldowns and technology gates: terraforming, fertility, shielding, gifts, research inspiration, orbital pushes, gravity changes and capture. Consequences enter planet/civilization histories. Milestones unlock live time controls. Development builds include resource/time/spawn/research/event tools and an object inspector; production excludes their controls.
+
+Validation: intervention costs, cooldowns, target/technology gates, research support, evolved-world browser interactions and all prior checks pass.
 6. Star systems: stars, stellar lifecycle, interstellar exploration and remnants.
 7. Galaxy: lazy procedural systems, simulation tiers and autonomous expansion.
 8. Advanced civilizations: diplomacy, archetypes, megastructures and technology.

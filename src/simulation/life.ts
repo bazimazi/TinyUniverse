@@ -30,7 +30,7 @@ export function simulateLife(state: Universe, seconds: number): void {
     life.species = life.stage === 'chemistry' ? 0 : Math.max(1, Math.floor(life.progress * suitability / 8));
     p.biodiversity = Math.min(1, Object.values(life.populations).reduce((a, b) => a + b, 0) / 6 + object.upgrades.biodiversity * 0.025);
     const rng = random(entitySeed(object.seed, `planet-event:${Math.round(state.time / BALANCE.decisionInterval)}`));
-    if (rng() < BALANCE.life.eventChance) {
+    if (rng() < BALANCE.life.eventChance && object.shieldUntil <= state.time) {
       const volcanic = rng() < 0.5;
       p.temperature = Math.max(180, Math.min(380, p.temperature + (volcanic ? 3 : -4)));
       p.atmosphere = Math.max(0, Math.min(1, p.atmosphere + (volcanic ? 0.015 : -0.01)));

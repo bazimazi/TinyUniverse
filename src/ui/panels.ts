@@ -4,14 +4,16 @@ import { canAfford, upgradeCost } from '../simulation/economy.ts';
 import { costText, duration, escape } from './format.ts';
 import type { Universe, UpgradeId } from '../core/types.ts';
 import { civilizationPanel, researchPanel } from './civilizations.ts';
-export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'events' | 'settings';
-export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', events: 'Journal', settings: 'Settings' };
+import { influencePanel } from './influence.ts';
+export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'events' | 'settings';
+export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', influence: 'Influence', events: 'Journal', settings: 'Settings' };
 export function button(label: string, action: string, value = '', disabled = false, secondary = false): string {
   return `<button class="${secondary ? 'secondary' : 'action'}" data-action="${action}" data-value="${escape(value)}" ${disabled ? 'disabled' : ''}>${escape(label)}</button>`;
 }
 export function metric(label: string, value: string): string { return `<div class="metric"><span>${escape(label)}</span><strong>${escape(value)}</strong></div>`; }
 export function panelContent(state: Universe, panel: Panel): string {
   const object = selectedObject(state);
+  if (panel === 'influence') return influencePanel(state);
   if (panel === 'civilizations') return civilizationPanel(state);
   if (panel === 'research') return researchPanel(state);
   if (panel === 'explore') {
@@ -32,7 +34,7 @@ export function panelContent(state: Universe, panel: Panel): string {
   return `<div class="eyebrow">MAKE SPACE YOUR OWN</div><h2>Settings & saves</h2><div class="cards">
     <article class="card"><h3>Accessibility</h3>${(['reducedMotion', 'highContrast', 'largeText', 'sound'] as const).map(id => `<label class="toggle"><input type="checkbox" data-setting="${id}" ${state.settings[id] ? 'checked' : ''}>${({ reducedMotion: 'Reduced motion', highContrast: 'High contrast', largeText: 'Large text', sound: 'Sound' })[id]}</label>`).join('')}</article>
     <article class="card"><h3>Your universe</h3><p>Seed ${state.seed} · ${duration(state.time)} old. Progress continues for up to 24 hours while you are away.</p><div class="button-row">${button('Save now', 'save')}${button('Export save', 'export', '', false, true)}</div><label class="file-label">Import a save<input id="import-file" type="file" accept=".json,application/json"></label><p class="muted">Import replaces the current universe after a valid save is checked.</p>${button('Start fresh', 'reset', '', false, true)}</article>
-  </div>`;
+  ${import.meta.env?.DEV ? `<article class="card"><details><summary>Developer tools</summary><p>Selected: ${escape(object.id)} · ${object.type} · mass ${object.mass.toFixed(2)} · time ${duration(state.time)}</p><div class="button-row">${[['resources', 'Add resources'], ['time', 'Advance 1h'], ['planet', 'Spawn planet'], ['civilization', 'Spawn civilization'], ['technology', 'Unlock technology'], ['kill', 'Collapse civilization'], ['event', 'Trigger event']].map(([value, label]) => button(label, 'debug', value, false, true)).join('')}</div><pre>${escape(JSON.stringify({ id: object.id, parent: object.parentId, orbit: object.orbit, environment: object.planet }, null, 2))}</pre></details></article>` : ''}</div>`;
 }
 export function nextGoal(state: Universe): { title: string; detail: string } {
   if (state.totalUpgrades === 0) return { title: 'Catch your first starlight', detail: 'Buy Solar collection below. Your planet will produce more energy.' };

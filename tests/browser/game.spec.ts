@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { createUniverse } from '../../src/core/universe.ts';
+import { advance } from '../../src/simulation/engine.ts';
+import { serialize, SAVE_KEY } from '../../src/persistence/save.ts';
 test('first upgrade, selection, accessible settings and reload', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
@@ -14,4 +17,16 @@ test('first upgrade, selection, accessible settings and reload', async ({ page }
   await expect(page.locator('#rate-energy')).toHaveText('+4.0 /s');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(errors).toEqual([]);
+});
+test('evolved world exposes civilization history and working intervention', async ({ page }) => {
+  const state = createUniverse(12, 0); advance(state, 7200); state.lastTimestamp = Date.now(); state.resources.energy = 10000; state.resources.matter = 10000;
+  await page.addInitScript(({ key, save }) => localStorage.setItem(key, save), { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await page.getByRole('button', { name: 'Life', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Living worlds' })).toBeVisible();
+  await page.getByRole('button', { name: 'Follow', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Following', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Influence', exact: true }).click();
+  await page.locator('.card').filter({ hasText: 'Gentle terraforming' }).getByRole('button').click();
+  await expect(page.locator('.card').filter({ hasText: 'Gentle terraforming' }).getByRole('button')).toBeDisabled();
+  await expect(page.getByRole('button', { name: '2×', exact: true })).toBeVisible();
 });

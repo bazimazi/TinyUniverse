@@ -18,7 +18,7 @@ export interface CelestialObject {
   id: string; seed: number; type: ObjectType; name: string; mass: number; radius: number;
   createdAt: number; parentId: string | null; children: string[]; orbit: Orbit | null;
   color: string; upgrades: Record<UpgradeId, number>; planet: PlanetProperties | null;
-  favorite: boolean; mined: boolean; deposit: number; life: Ecosystem | null;
+  favorite: boolean; mined: boolean; deposit: number; life: Ecosystem | null; shieldUntil: number;
 }
 export type ExploreKind = 'orbital';
 export interface ExplorationJob { kind: ExploreKind; targetId: string; startedAt: number; endsAt: number; index: number }
@@ -35,12 +35,13 @@ export interface Civilization {
   stability: number; science: number; energy: number; economy: number; infrastructure: number;
   military: number; knowledge: number; level: number; distress: number;
   domains: Record<Domain, number>; technologies: string[]; researching: string | null; researchPoints: number;
-  timeline: GameEvent[]; followed: boolean; colonies: string[];
+  timeline: GameEvent[]; followed: boolean; colonies: string[]; supportUntil: number;
 }
 export interface Universe {
   version: number; seed: number; time: number; lastTimestamp: number; selectedId: string;
   resources: Resources; objects: Record<string, CelestialObject>; events: GameEvent[];
   settings: Settings; totalUpgrades: number; exploration: ExplorationState; civilizations: Record<string, Civilization>;
+  cooldowns: Record<string, number>; speed: number;
 }
 export interface ActionResult { ok: boolean; message: string }
 export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void }

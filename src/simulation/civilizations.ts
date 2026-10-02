@@ -21,7 +21,7 @@ export function foundCivilization(state: Universe, planetId: string): Civilizati
     government: traits.includes('Cooperative') ? 'Council' : traits.includes('Aggressive') ? 'Dominion' : 'Federation',
     stability: 0.7, science: traits.includes('Scientific') ? 0.9 : 0.6, energy: 0.6, economy: 0.5, infrastructure: 0.3,
     military: traits.includes('Aggressive') ? 0.8 : 0.3, knowledge: 0, level: 0, distress: 0, domains,
-    technologies: [], researching: null, researchPoints: 0, timeline: [], followed: false, colonies: [planetId]
+    technologies: [], researching: null, researchPoints: 0, timeline: [], followed: false, colonies: [planetId], supportUntil: 0
   };
   state.civilizations[id] = civ;
   civilizationEvent(state, civ, 'CivilizationFounded', `${civ.name} has emerged`, `The first settlements on ${state.objects[planetId].name}. Their story is their own.`, 'wonder');
@@ -56,7 +56,7 @@ export function simulateCivilizations(state: Universe, seconds: number): void {
     }
     if (civ.researching) {
       const id = civ.researching, tech = TECHNOLOGIES[id];
-      const research = seconds * BALANCE.civilization.research * civ.science * civ.energy * (0.5 + civ.infrastructure) * civ.domains[tech.domain] * Math.max(1, Math.log10(civ.population) / 3);
+      const research = seconds * BALANCE.civilization.research * civ.science * civ.energy * (0.5 + civ.infrastructure) * civ.domains[tech.domain] * Math.max(1, Math.log10(civ.population) / 3) * (civ.supportUntil > state.time ? 1.5 : 1);
       civ.researchPoints += research; civ.knowledge += research;
       if (civ.researchPoints >= tech.cost) {
         civ.researchPoints -= tech.cost; civ.technologies.push(id); civ.researching = null; civ.level = Math.max(civ.level, tech.level);

@@ -7,4 +7,9 @@ export function migrate(state: Universe): void {
   }
   if (state.version < 3) for (const object of Object.values(state.objects)) object.life = object.planet ? initialLife(object.id === 'planet-0') : null;
   if (state.version < 4) { state.civilizations = {}; state.resources.knowledge = 0; }
+  if (state.version < 5) {
+    state.cooldowns = {}; state.speed = 1;
+    for (const object of Object.values(state.objects)) object.shieldUntil = 0;
+    for (const civ of Object.values(state.civilizations)) civ.supportUntil = 0;
+  }
 }

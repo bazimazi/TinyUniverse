@@ -25,6 +25,7 @@ export function assertUniverse(state: Universe): void {
   const job = state.exploration.job;
   if (job && (job.kind !== 'orbital' || !state.objects[job.targetId] || !finite(job.startedAt) || !finite(job.endsAt) || job.endsAt < state.time || !finite(job.index))) throw new Error('Invalid exploration job.');
   if (!state.civilizations) throw new Error('Invalid civilizations.');
+  if (!state.cooldowns || Object.values(state.cooldowns).some(value => !finite(value)) || ![1, 2, 5, 10, 25].includes(state.speed)) throw new Error('Invalid abilities or speed.');
   for (const civ of Object.values(state.civilizations)) {
     if (!state.objects[civ.planetId]?.planet || !finite(civ.population) || !finite(civ.foundedAt) || !finite(civ.level) || !finite(civ.researchPoints) || !Array.isArray(civ.technologies) || !Array.isArray(civ.timeline) || !['active', 'extinct'].includes(civ.status)) throw new Error('Invalid civilization.');
     for (const value of [civ.stability, civ.science, civ.energy, civ.economy, civ.infrastructure, civ.military]) if (!finite(value) || value > 1) throw new Error('Invalid civilization statistics.');

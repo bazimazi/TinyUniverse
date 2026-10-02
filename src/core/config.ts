@@ -7,7 +7,7 @@ export const BALANCE = {
   life: { simpleAt: 60, complexAt: 240, intelligentAt: 540, growth: 0.006, eventChance: 0.008, minimumHabitability: 0.35 },
   civilization: { basePopulation: 1000, growth: 0.0008, capacity: 1e7, research: 1.5, collapseDelay: 180, maxHistory: 100 }
 };
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 export const UPGRADES: Record<UpgradeId, { name: string; description: string; cost: Cost }> = {
   solar: { name: 'Solar collection', description: 'Harvest starlight. +2 energy / second.', cost: { minerals: 15, matter: 8 } },
   mining: { name: 'Deep mining', description: 'Reach rich seams. +1.5 minerals / second.', cost: { energy: 30, matter: 12 } },

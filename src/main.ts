@@ -10,6 +10,7 @@ import { Scene } from './rendering/scene.ts';
 import { duration, number } from './ui/format.ts';
 import { nextGoal, panelContent, PANEL_LABELS } from './ui/panels.ts';
 import { mineAsteroid, startExploration } from './gameplay/exploration.ts';
+import { maximumSpeed, useAbility } from './gameplay/abilities.ts';
 import type { Panel } from './ui/panels.ts';
 
 let loaded: ReturnType<typeof load>;
@@ -24,7 +25,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div id="resources" class="resources" aria-label="Resource balances">${RESOURCE_IDS.map(id => `<div class="resource ${id}"><span>${id === 'biology' ? 'Biological potential' : id[0].toUpperCase() + id.slice(1)}</span><strong id="amount-${id}">0</strong><small id="rate-${id}">+0 /s</small></div>`).join('')}</div>
   <main><section class="observatory" aria-label="Celestial observatory"><div class="scene-head"><span class="eyebrow">THE UNIVERSE IS WAKING UP</span><span id="age" class="muted"></span></div>
   <canvas id="universe" aria-label="Interactive celestial scene. Use the world list to select objects with a keyboard." role="img"></canvas>
-  <div class="scene-controls"><button class="secondary" data-action="view" data-value="planet">Planet</button><button class="secondary" data-action="view" data-value="system">System</button><button class="icon-button" data-action="zoom" data-value="1.2" aria-label="Zoom in">+</button><button class="icon-button" data-action="zoom" data-value="0.8" aria-label="Zoom out">−</button></div>
+  <div class="scene-controls"><button class="secondary" data-action="view" data-value="planet">Planet</button><button class="secondary" data-action="view" data-value="system">System</button><button class="icon-button" data-action="zoom" data-value="1.2" aria-label="Zoom in">+</button><button class="icon-button" data-action="zoom" data-value="0.8" aria-label="Zoom out">−</button></div><div id="time-controls" class="scene-controls" aria-label="Simulation speed"></div>
   <div id="goal" class="goal"></div><div id="worlds" class="worlds" aria-label="Select a celestial object"></div></section>
   <section class="dashboard"><nav aria-label="Game panels">${Object.entries(PANEL_LABELS).map(([id, label]) => `<button data-action="tab" data-value="${id}">${label}</button>`).join('')}</nav><div id="panel"></div></section></main>
   <footer>A little world. A living universe. <span id="save-status">Autosave enabled</span></footer><div id="toast" role="status" aria-live="polite"></div>`;
@@ -54,6 +55,12 @@ function render(): void {
     document.querySelector(`#rate-${id}`)!.textContent = `+${number(production[id])} /s`;
   }
   document.querySelector('#age')!.textContent = duration(state.time);
+  const speeds = [1, 2, 5, 10, 25].filter(speed => speed <= maximumSpeed(state));
+  const controls = document.querySelector('#time-controls')!, speedKey = `${speeds.join(',')}:${state.speed}`;
+  if (controls.getAttribute('data-key') !== speedKey) {
+    controls.innerHTML = speeds.length > 1 ? speeds.map(speed => `<button class="secondary" data-action="speed" data-value="${speed}" aria-pressed="${state.speed === speed}">${speed}×</button>`).join('') : '';
+    controls.setAttribute('data-key', speedKey);
+  }
   const goal = nextGoal(state);
   document.querySelector('#goal')!.innerHTML = `<span class="eyebrow">YOUR NEXT SMALL STEP</span><strong>${goal.title}</strong><p>${goal.detail}</p>`;
   const worldList = document.querySelector('#worlds')!;
@@ -77,7 +84,7 @@ function render(): void {
   document.body.classList.toggle('large-text', state.settings.largeText);
   document.body.classList.toggle('reduced-motion', state.settings.reducedMotion);
 }
-document.addEventListener('click', event => {
+document.addEventListener('click', async event => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
   if (!button) return;
   const { action, value = '' } = button.dataset;
@@ -88,6 +95,9 @@ document.addEventListener('click', event => {
   if (action === 'upgrade') toast(buyUpgrade(state, state.selectedId, value as UpgradeId).message);
   if (action === 'explore') toast(startExploration(state).message);
   if (action === 'mine') toast(mineAsteroid(state, value).message);
+  if (action === 'ability') toast(useAbility(state, value, state.selectedId).message);
+  if (action === 'speed') state.speed = Math.min(maximumSpeed(state), Number(value));
+  if (action === 'debug' && import.meta.env.DEV) { const { debugAction } = await import('./gameplay/debug.ts'); toast(debugAction(state, value).message); }
   if (action === 'follow' && state.civilizations[value]) state.civilizations[value].followed = !state.civilizations[value].followed;
   if (action === 'save') persist(true);
   if (action === 'export') {
@@ -116,7 +126,7 @@ document.addEventListener('change', async event => {
 let previous = performance.now(), lastRender = 0;
 function frame(now: number): void {
   if (!document.hidden) {
-    advance(state, Math.max(0, (now - previous) / 1000));
+    advance(state, Math.max(0, (now - previous) / 1000) * state.speed);
     if (now - lastRender > 250) { render(); lastRender = now; }
     scene.draw(state);
   }
