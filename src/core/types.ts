@@ -1,4 +1,4 @@
-export const RESOURCE_IDS = ['energy', 'matter', 'minerals', 'biology'] as const;
+export const RESOURCE_IDS = ['energy', 'matter', 'minerals', 'biology', 'knowledge'] as const;
 export type ResourceId = typeof RESOURCE_IDS[number];
 export type Resources = Record<ResourceId, number>;
 export type Cost = Partial<Resources>;
@@ -28,10 +28,19 @@ export interface GameEvent {
   severity: 'info' | 'wonder' | 'danger';
 }
 export interface Settings { reducedMotion: boolean; highContrast: boolean; largeText: boolean; sound: boolean }
+export type Domain = 'biology' | 'physics' | 'energy' | 'computing' | 'materials' | 'space' | 'social' | 'gravity' | 'quantum';
+export interface Civilization {
+  id: string; seed: number; name: string; planetId: string; foundedAt: number; population: number;
+  status: 'active' | 'extinct'; traits: string[]; culture: string; government: string;
+  stability: number; science: number; energy: number; economy: number; infrastructure: number;
+  military: number; knowledge: number; level: number; distress: number;
+  domains: Record<Domain, number>; technologies: string[]; researching: string | null; researchPoints: number;
+  timeline: GameEvent[]; followed: boolean; colonies: string[];
+}
 export interface Universe {
   version: number; seed: number; time: number; lastTimestamp: number; selectedId: string;
   resources: Resources; objects: Record<string, CelestialObject>; events: GameEvent[];
-  settings: Settings; totalUpgrades: number; exploration: ExplorationState;
+  settings: Settings; totalUpgrades: number; exploration: ExplorationState; civilizations: Record<string, Civilization>;
 }
 export interface ActionResult { ok: boolean; message: string }
 export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void }

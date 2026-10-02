@@ -4,7 +4,7 @@ import { RESOURCE_IDS } from '../core/types.ts';
 import { habitability } from './life.ts';
 import type { ActionResult, CelestialObject, Cost, Resources, Universe, UpgradeId } from '../core/types.ts';
 export function rates(state: Universe): Resources {
-  const result: Resources = { energy: 0, matter: 0, minerals: 0, biology: 0 };
+  const result: Resources = { energy: 0, matter: 0, minerals: 0, biology: 0, knowledge: 0 };
   for (const object of Object.values(state.objects)) {
     if (object.mined) result.minerals += BALANCE.asteroidYield;
     if (!object.planet) continue;
@@ -13,7 +13,11 @@ export function rates(state: Universe): Resources {
     result.minerals += BALANCE.production.minerals + object.upgrades.mining * 1.5;
     result.biology += BALANCE.production.biology + object.upgrades.oceans * 0.08 + object.upgrades.biodiversity * 0.2 + object.planet.biodiversity * 0.3;
   }
+  result.knowledge = knowledgeRate(state);
   return result;
+}
+export function knowledgeRate(state: Universe): number {
+  return Object.values(state.civilizations).reduce((sum, civ) => sum + (civ.status === 'active' ? (0.02 + civ.level * 0.015) * civ.science : 0), 0);
 }
 export function produce(state: Universe, seconds: number): void {
   const production = rates(state);

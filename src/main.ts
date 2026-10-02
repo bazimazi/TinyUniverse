@@ -48,6 +48,7 @@ function persist(notify = false): void {
 }
 function render(): void {
   const production = rates(state);
+  document.querySelector<HTMLElement>('.resource.knowledge')!.hidden = Object.keys(state.civilizations).length === 0;
   for (const id of RESOURCE_IDS) {
     document.querySelector(`#amount-${id}`)!.textContent = number(state.resources[id]);
     document.querySelector(`#rate-${id}`)!.textContent = `+${number(production[id])} /s`;
@@ -87,6 +88,7 @@ document.addEventListener('click', event => {
   if (action === 'upgrade') toast(buyUpgrade(state, state.selectedId, value as UpgradeId).message);
   if (action === 'explore') toast(startExploration(state).message);
   if (action === 'mine') toast(mineAsteroid(state, value).message);
+  if (action === 'follow' && state.civilizations[value]) state.civilizations[value].followed = !state.civilizations[value].followed;
   if (action === 'save') persist(true);
   if (action === 'export') {
     const link = document.createElement('a'); link.href = URL.createObjectURL(new Blob([serialize(state)], { type: 'application/json' }));

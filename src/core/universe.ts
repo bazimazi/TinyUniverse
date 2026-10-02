@@ -24,9 +24,10 @@ export function createUniverse(seed = 1307, timestamp = Date.now()): Universe {
   star.children.push(planet.id);
   return {
     version: SAVE_VERSION, seed: seed >>> 0, time: 0, lastTimestamp: timestamp, selectedId: planet.id,
-    resources: { energy: 25, matter: 12, minerals: 20, biology: 0 },
+    resources: { energy: 25, matter: 12, minerals: 20, biology: 0, knowledge: 0 },
     objects: { [star.id]: star, [planet.id]: planet }, events: [], totalUpgrades: 0,
     exploration: { job: null, completed: { orbital: 0 } },
+    civilizations: {},
     settings: { reducedMotion: false, highContrast: false, largeText: false, sound: false }
   };
 }

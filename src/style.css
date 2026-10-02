@@ -12,7 +12,7 @@ header { display: flex; align-items: center; justify-content: space-between; hei
 .brand { font: 600 16px 'Space Grotesk', system-ui; letter-spacing: .17em; color: #e2f8f2; text-decoration: none; display: flex; align-items: center; gap: 12px; }
 .brand-icon { color: var(--accent); font-size: 34px; }
 .icon-button { padding: 8px 13px; background: #ffffff06; font-size: 19px; }
-.resources { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.resources { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }.resource[hidden] { display: none; }details { margin-top: 18px; font-size: 12px; }summary { min-height: 44px; cursor: pointer; padding: 12px 0; }
 .resource { border: 1px solid var(--line); border-radius: 12px; padding: 15px 20px; background: #0e1c2dcc; display: grid; grid-template-columns: 1fr auto; gap: 4px; }
 .resource span { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
 .resource strong { font: 500 24px 'Space Grotesk', system-ui; }

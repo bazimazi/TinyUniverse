@@ -25,6 +25,12 @@ Validation: build, ten headless tests (including 1h live/offline equivalence and
 2. Celestial expansion: moons, planets, asteroids, exploration and selection.
 3. Life: ecosystems, biodiversity, evolution and planetary events.
 4. Civilization: population, traits, technology, history and collapse.
+
+## Phase 4 — Civilization
+
+Implemented autonomous seeded cultures and governments, trait/domain-weighted research, 17 prerequisite-linked technologies, analytical population curves, carrying capacity, stability, collapse, preserved personal timelines and following. Knowledge becomes visible only after a civilization appears.
+
+Validation: formation, population growth, technology, history, collapse and live/offline determinism tests; build, performance and portrait/desktop smoke checks.
 5. Influence: environment, gravity, gifts and civilization interventions.
 6. Star systems: stars, stellar lifecycle, interstellar exploration and remnants.
 7. Galaxy: lazy procedural systems, simulation tiers and autonomous expansion.
