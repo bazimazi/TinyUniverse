@@ -1,8 +1,10 @@
 import type { Universe } from '../core/types.ts';
 import { initialLife } from '../core/ecosystem.ts';
+import { initialStar } from '../core/stellar.ts';
+import { entitySeed } from '../core/random.ts';
 export function migrate(state: Universe): void {
   if (state.version < 2) {
-    state.exploration = { job: null, completed: { orbital: 0 } };
+    state.exploration = { job: null, completed: { orbital: 0, interstellar: 0 } };
     for (const object of Object.values(state.objects)) { object.mined = false; object.deposit = 0; }
   }
   if (state.version < 3) for (const object of Object.values(state.objects)) object.life = object.planet ? initialLife(object.id === 'planet-0') : null;
@@ -11,5 +13,10 @@ export function migrate(state: Universe): void {
     state.cooldowns = {}; state.speed = 1;
     for (const object of Object.values(state.objects)) object.shieldUntil = 0;
     for (const civ of Object.values(state.civilizations)) civ.supportUntil = 0;
+  }
+  if (state.version < 6) {
+    state.exploration.completed.interstellar = 0;
+    state.systems = { 'system-0': { id: 'system-0', seed: entitySeed(state.seed, 'system-0'), name: 'Solace', starId: 'star-0', position: { x: 0, y: 0 }, galaxyId: 'galaxy-0' } };
+    for (const object of Object.values(state.objects)) { object.systemId = 'system-0'; object.stellar = object.type === 'star' ? initialStar() : null; }
   }
 }

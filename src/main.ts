@@ -2,7 +2,7 @@ import './style.css';
 import { assertUniverse } from './core/invariants.ts';
 import { createUniverse } from './core/universe.ts';
 import { RESOURCE_IDS } from './core/types.ts';
-import type { Settings, UpgradeId } from './core/types.ts';
+import type { ExploreKind, Settings, UpgradeId } from './core/types.ts';
 import { buyUpgrade, rates } from './simulation/economy.ts';
 import { advance, resumeOffline } from './simulation/engine.ts';
 import { deserialize, load, save, serialize, SAVE_KEY } from './persistence/save.ts';
@@ -93,7 +93,7 @@ document.addEventListener('click', async event => {
   if (action === 'view') scene.view = value as Scene['view'];
   if (action === 'zoom') scene.zoom(Number(value));
   if (action === 'upgrade') toast(buyUpgrade(state, state.selectedId, value as UpgradeId).message);
-  if (action === 'explore') toast(startExploration(state).message);
+  if (action === 'explore') toast(startExploration(state, (value || 'orbital') as ExploreKind).message);
   if (action === 'mine') toast(mineAsteroid(state, value).message);
   if (action === 'ability') toast(useAbility(state, value, state.selectedId).message);
   if (action === 'speed') state.speed = Math.min(maximumSpeed(state), Number(value));

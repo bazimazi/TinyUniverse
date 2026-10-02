@@ -2,7 +2,7 @@ export const RESOURCE_IDS = ['energy', 'matter', 'minerals', 'biology', 'knowled
 export type ResourceId = typeof RESOURCE_IDS[number];
 export type Resources = Record<ResourceId, number>;
 export type Cost = Partial<Resources>;
-export type ObjectType = 'planet' | 'star' | 'moon' | 'asteroid';
+export type ObjectType = 'planet' | 'star' | 'moon' | 'asteroid' | 'gas-giant' | 'nebula' | 'black-hole' | 'neutron-star' | 'white-dwarf';
 export type UpgradeId = 'solar' | 'mining' | 'atmosphere' | 'oceans' | 'biodiversity';
 export interface Orbit { radius: number; period: number; eccentricity: number; phase: number }
 export interface PlanetProperties {
@@ -19,8 +19,11 @@ export interface CelestialObject {
   createdAt: number; parentId: string | null; children: string[]; orbit: Orbit | null;
   color: string; upgrades: Record<UpgradeId, number>; planet: PlanetProperties | null;
   favorite: boolean; mined: boolean; deposit: number; life: Ecosystem | null; shieldUntil: number;
+  systemId: string; stellar: StellarState | null;
 }
-export type ExploreKind = 'orbital';
+export interface StellarState { class: 'red-dwarf' | 'yellow' | 'blue'; stage: 'main-sequence' | 'giant' | 'remnant'; solarMass: number; luminosity: number; temperature: number; lifespan: number; fuel: number; spin: number }
+export interface StarSystem { id: string; seed: number; name: string; starId: string; position: { x: number; y: number }; galaxyId: string }
+export type ExploreKind = 'orbital' | 'interstellar';
 export interface ExplorationJob { kind: ExploreKind; targetId: string; startedAt: number; endsAt: number; index: number }
 export interface ExplorationState { job: ExplorationJob | null; completed: Record<ExploreKind, number> }
 export interface GameEvent {
@@ -42,6 +45,7 @@ export interface Universe {
   resources: Resources; objects: Record<string, CelestialObject>; events: GameEvent[];
   settings: Settings; totalUpgrades: number; exploration: ExplorationState; civilizations: Record<string, Civilization>;
   cooldowns: Record<string, number>; speed: number;
+  systems: Record<string, StarSystem>;
 }
 export interface ActionResult { ok: boolean; message: string }
 export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void }

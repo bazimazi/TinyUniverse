@@ -1,10 +1,11 @@
-import { BALANCE, UPGRADES } from '../core/config.ts';
+﻿import { BALANCE, UPGRADES } from '../core/config.ts';
 import { selectedObject } from '../core/universe.ts';
 import { canAfford, upgradeCost } from '../simulation/economy.ts';
 import { costText, duration, escape } from './format.ts';
 import type { Universe, UpgradeId } from '../core/types.ts';
 import { civilizationPanel, researchPanel } from './civilizations.ts';
 import { influencePanel } from './influence.ts';
+import { explorationPanel } from './exploration.ts';
 export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'events' | 'settings';
 export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', influence: 'Influence', events: 'Journal', settings: 'Settings' };
 export function button(label: string, action: string, value = '', disabled = false, secondary = false): string {
@@ -16,12 +17,9 @@ export function panelContent(state: Universe, panel: Panel): string {
   if (panel === 'influence') return influencePanel(state);
   if (panel === 'civilizations') return civilizationPanel(state);
   if (panel === 'research') return researchPanel(state);
-  if (panel === 'explore') {
-    const job = state.exploration.job;
-    return `<div class="eyebrow">WHAT LIES JUST BEYOND?</div><h2>A little farther</h2><p>Survey nearby space. Discover moons, new worlds and asteroids. Each expedition continues while you are away.</p><article class="card"><h3>Orbital expedition</h3><p>${state.totalUpgrades < 2 ? 'Build two upgrades to launch your first probe.' : 'The next signal might be a companion world, a new planet, or a rich asteroid.'}</p>${job ? `<progress aria-label="Expedition progress" value="${state.time - job.startedAt}" max="${job.endsAt - job.startedAt}"></progress><p>Returning in ${duration(Math.max(0, job.endsAt - state.time))}</p>` : button(`Launch · ${costText(BALANCE.exploration.cost)}`, 'explore', '', state.totalUpgrades < 2 || !canAfford(state, BALANCE.exploration.cost))}</article><h3>Your discoveries</h3><div class="cards">${Object.values(state.objects).filter(o => o.id !== 'planet-0' && o.type !== 'star').map(o => `<article class="card"><div class="card-title"><strong>${escape(o.name)}</strong><span class="badge">${o.type}</span></div><p>${o.type === 'moon' ? 'Tides and a steadier climate for its parent world.' : o.type === 'asteroid' ? `${o.mined ? 'Mining outpost active' : 'An untouched deposit'} · ${Math.floor(o.deposit)} minerals` : 'A new world to develop.'}</p><div class="button-row">${button('Observe', 'select', o.id, false, true)}${o.type === 'asteroid' && !o.mined ? button('Mine · 60 energy / 25 matter', 'mine', o.id, !canAfford(state, { energy: 60, matter: 25 })) : ''}</div></article>`).join('') || '<p>Your probe has yet to discover another body.</p>'}</div>`;
-  }
+  if (panel === 'explore') return explorationPanel(state);
   if (panel === 'develop') {
-    if (!object.planet) return `<h2>${escape(object.name)}</h2><p>A steady light for the worlds around it. Select a planet to begin developing.</p>`;
+    if (!object.planet) return `<h2>${escape(object.name)}</h2><p>${object.type.replace('-', ' ')} · ${object.stellar ? `${object.stellar.class}, ${object.stellar.stage}. Fuel remaining ${Math.round(object.stellar.fuel * 100)}%. Luminosity ${object.stellar.luminosity.toFixed(2)} solar units.` : 'A small piece of your universe.'}</p><p>Select a planet to develop its environment.</p>`;
     return `<div class="eyebrow">YOUR FIRST WORLD</div><h2>${escape(object.name)}</h2><p class="muted">Small beginnings. Endless possibilities.</p>
       <div class="metrics">${metric('Habitability', `${Math.round(object.planet.habitability * 100)}%`)}${metric('Water coverage', `${Math.round(object.planet.water * 100)}%`)}${metric('Atmosphere', `${Math.round(object.planet.atmosphere * 100)}%`)}${metric('Age', duration(state.time - object.createdAt))}</div>
       <article class="card"><div class="card-title"><strong>${object.life?.stage === 'chemistry' ? 'The chemistry of possibility' : object.life?.stage === 'simple' ? 'A primitive ecosystem' : object.life?.stage === 'complex' ? 'An explosion of life' : 'Intelligent life'}</strong><span class="badge">${object.life?.species ?? 0} species</span></div><p>Biodiversity ${Math.round(object.planet.biodiversity * 100)}% · ${Math.round(object.planet.temperature - 273.15)}°C</p>${object.life ? `<div class="ecosystem">${Object.entries(object.life.populations).map(([key, value]) => `<div><span>${key}</span><meter aria-label="${key} abundance" min="0" max="1" value="${value}"></meter></div>`).join('')}</div>` : ''}</article>

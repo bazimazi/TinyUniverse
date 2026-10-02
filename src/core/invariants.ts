@@ -8,7 +8,8 @@ export function assertUniverse(state: Universe): void {
   if (!Array.isArray(state.events) || !state.settings || Object.values(state.settings).some(value => typeof value !== 'boolean')) throw new Error('Invalid history or settings.');
   for (const [id, object] of Object.entries(state.objects)) {
     if (!object || object.id !== id || typeof object.name !== 'string' || object.name.length > 80 || !finite(object.mass, Number.MIN_VALUE) || !finite(object.radius, Number.MIN_VALUE)) throw new Error('Invalid celestial object.');
-    if (!['star', 'planet', 'moon', 'asteroid'].includes(object.type) || !Array.isArray(object.children) || !object.upgrades || ['solar', 'mining', 'atmosphere', 'oceans', 'biodiversity'].some(key => !finite(object.upgrades[key as keyof typeof object.upgrades]))) throw new Error('Invalid celestial properties.');
+    if (!['star', 'planet', 'moon', 'asteroid', 'gas-giant', 'nebula', 'black-hole', 'neutron-star', 'white-dwarf'].includes(object.type) || !Array.isArray(object.children) || !object.upgrades || ['solar', 'mining', 'atmosphere', 'oceans', 'biodiversity'].some(key => !finite(object.upgrades[key as keyof typeof object.upgrades]))) throw new Error('Invalid celestial properties.');
+    if (!state.systems?.[object.systemId] || object.stellar && Object.values(object.stellar).filter(v => typeof v === 'number').some(v => !finite(v))) throw new Error('Invalid star system.');
     if (object.parentId && !state.objects[object.parentId]) throw new Error('Missing orbit parent.');
     if (object.orbit && (!finite(object.orbit.radius, 1) || !finite(object.orbit.period, 1) || !finite(object.orbit.eccentricity) || object.orbit.eccentricity >= 1 || !finite(object.orbit.phase))) throw new Error('Invalid orbit.');
     if (object.planet && Object.values(object.planet).some(value => !finite(value))) throw new Error('Invalid planet environment.');
@@ -23,7 +24,7 @@ export function assertUniverse(state: Universe): void {
   }
   if (!state.exploration || !finite(state.exploration.completed.orbital)) throw new Error('Invalid exploration state.');
   const job = state.exploration.job;
-  if (job && (job.kind !== 'orbital' || !state.objects[job.targetId] || !finite(job.startedAt) || !finite(job.endsAt) || job.endsAt < state.time || !finite(job.index))) throw new Error('Invalid exploration job.');
+  if (job && (!['orbital', 'interstellar'].includes(job.kind) || !state.objects[job.targetId] || !finite(job.startedAt) || !finite(job.endsAt) || job.endsAt < state.time || !finite(job.index))) throw new Error('Invalid exploration job.');
   if (!state.civilizations) throw new Error('Invalid civilizations.');
   if (!state.cooldowns || Object.values(state.cooldowns).some(value => !finite(value)) || ![1, 2, 5, 10, 25].includes(state.speed)) throw new Error('Invalid abilities or speed.');
   for (const civ of Object.values(state.civilizations)) {

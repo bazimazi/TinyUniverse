@@ -3,6 +3,7 @@ import { produce } from './economy.ts';
 import { completeExploration } from '../gameplay/exploration.ts';
 import { simulateLife } from './life.ts';
 import { simulateCivilizations } from './civilizations.ts';
+import { simulateStars } from './stars.ts';
 import type { Universe } from '../core/types.ts';
 export function advance(state: Universe, seconds: number): void {
   if (!Number.isFinite(seconds) || seconds < 0) throw new Error('Elapsed time must be finite and nonnegative.');
@@ -14,6 +15,7 @@ export function advance(state: Universe, seconds: number): void {
     produce(state, step); state.time = boundary;
     completeExploration(state);
     if (Math.abs(boundary - decision) < 1e-7) {
+      simulateStars(state);
       simulateLife(state, BALANCE.decisionInterval);
       simulateCivilizations(state, BALANCE.decisionInterval);
     }

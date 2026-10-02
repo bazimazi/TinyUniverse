@@ -39,6 +39,12 @@ Implemented nine costed abilities with per-target cooldowns and technology gates
 
 Validation: intervention costs, cooldowns, target/technology gates, research support, evolved-world browser interactions and all prior checks pass.
 6. Star systems: stars, stellar lifecycle, interstellar exploration and remnants.
+
+## Phase 6 — Star systems
+
+Implemented spaceflight-gated interstellar expeditions, deterministic multi-planet systems, gas giants, stellar classes/fuel/lifespans, giant phases and mass-dependent white dwarfs, neutron stars and black holes. Stellar luminosity changes alter planetary climates. The system renderer shows only the selected system.
+
+Validation: reproducible/idempotent generation, valid hierarchies, remnant outcomes and climate effects; full build, tests, performance and browser gates.
 7. Galaxy: lazy procedural systems, simulation tiers and autonomous expansion.
 8. Advanced civilizations: diplomacy, archetypes, megastructures and technology.
 9. Discovery: rare events, ruins, codex and exploration chains.
