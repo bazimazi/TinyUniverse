@@ -10,6 +10,10 @@ export function habitability(object: CelestialObject, state: Universe): number {
   const tides = object.children.filter(id => state.objects[id]?.type === 'moon').length * 0.025;
   return Math.min(1, Math.max(0, (0.2 + p.atmosphere * 0.3 + p.water * 0.3 + p.magneticField * 0.2 + tides) * temperature));
 }
+export function evolutionRate(state: Universe, object: CelestialObject): number {
+  const p = object.planet;
+  return !p || p.habitability < BALANCE.life.minimumHabitability ? 0 : p.habitability * Math.min(1, p.water * 2) * (1 + object.upgrades.biodiversity * 0.15) * evolutionMultiplier(state);
+}
 export function simulateLife(state: Universe): void {
   for (const object of Object.values(state.objects)) {
     const p = object.planet, life = object.life;
@@ -19,7 +23,7 @@ export function simulateLife(state: Universe): void {
     object.lastLifeUpdate = state.time;
     p.habitability = habitability(object, state);
     const suitability = p.habitability * Math.min(1, p.water * 2);
-    if (p.habitability >= BALANCE.life.minimumHabitability) life.progress += seconds * suitability * (1 + object.upgrades.biodiversity * 0.15) * evolutionMultiplier(state);
+    life.progress += seconds * evolutionRate(state, object);
     const next = life.progress >= BALANCE.life.intelligentAt ? 'intelligent' : life.progress >= BALANCE.life.complexAt ? 'complex' : life.progress >= BALANCE.life.simpleAt ? 'simple' : 'chemistry';
     if (next !== life.stage) {
       life.stage = next;

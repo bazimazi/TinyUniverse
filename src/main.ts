@@ -7,8 +7,9 @@ import { buyUpgrade, rates } from './simulation/economy.ts';
 import { advance } from './simulation/engine.ts';
 import { deserialize, load, save, serialize, SAVE_KEY } from './persistence/save.ts';
 import { Scene } from './rendering/scene.ts';
-import { duration, number } from './ui/format.ts';
-import { nextGoal, panelContent, PANEL_LABELS } from './ui/panels.ts';
+import { duration, escape, number } from './ui/format.ts';
+import { panelContent, PANEL_LABELS } from './ui/panels.ts';
+import { nextGoal } from './ui/goals.ts';
 import { mineAsteroid, startExploration } from './gameplay/exploration.ts';
 import { maximumSpeed, useAbility } from './gameplay/abilities.ts';
 import { buildStructure } from './gameplay/megastructures.ts';
@@ -114,7 +115,8 @@ function render(): void {
     controls.setAttribute('data-key', speedKey);
   }
   const goal = nextGoal(state);
-  document.querySelector('#goal')!.innerHTML = `<span class="eyebrow">YOUR NEXT SMALL STEP</span><strong>${goal.title}</strong><p>${goal.detail}</p>`;
+  const goalElement = document.querySelector('#goal')!, goalHtml = `<span class="eyebrow">YOUR NEXT SMALL STEP</span><strong>${escape(goal.title)}</strong><p>${escape(goal.detail)}</p><button class="secondary" data-action="goal" data-value="${goal.panel}|${escape(goal.targetId)}">${escape(goal.label)}</button>`;
+  if (goalElement.innerHTML !== goalHtml) goalElement.innerHTML = goalHtml;
   const worldList = document.querySelector('#worlds')!;
   const visibleObjects = Object.values(state.objects).filter(object => object.systemId === state.objects[state.selectedId].systemId || object.favorite).slice(0, 40);
   const worldKey = visibleObjects.map(object => `${object.id}:${object.name}:${object.id === state.selectedId}`).join('|');
@@ -157,6 +159,10 @@ document.addEventListener('click', async event => {
   const { action, value = '' } = button.dataset;
   if (resuming || !settleLive()) return;
   if (action === 'tab') panel = value as Panel;
+  if (action === 'goal') {
+    const [destination, targetId] = value.split('|');
+    if (Object.hasOwn(PANEL_LABELS, destination) && Object.hasOwn(state.objects, targetId)) { panel = destination as Panel; state.selectedId = targetId; scene.view = 'planet'; }
+  }
   if (action === 'dismiss-return' || action === 'return-journal') returnSummary.hidden = true;
   if (action === 'return-journal') panel = 'events';
   if (action === 'select') state.selectedId = value;
@@ -189,9 +195,9 @@ document.addEventListener('click', async event => {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) localStorage.setItem(`${SAVE_KEY}.archive`, raw); } catch { /* Exports remain available. */ }
     state = createUniverse(); sessionClock.reset(state.lastTimestamp, performance.now()); returnSummary.hidden = true; scene.view = 'planet'; savingBlocked = false; persist(true);
   }
-  if (['select', 'favorite', 'rename', 'upgrade', 'explore', 'mine', 'build', 'mediate', 'investigate', 'law', 'ability', 'speed', 'debug', 'follow'].includes(action!)) persist();
+  if (['goal', 'select', 'favorite', 'rename', 'upgrade', 'explore', 'mine', 'build', 'mediate', 'investigate', 'law', 'ability', 'speed', 'debug', 'follow'].includes(action!)) persist();
   lastPanel = ''; render();
-  if (action === 'return-journal') document.querySelector('.dashboard')!.scrollIntoView({ behavior: state.settings.reducedMotion ? 'instant' : 'smooth' });
+  if (action === 'return-journal' || action === 'goal') document.querySelector('.dashboard')!.scrollIntoView({ behavior: state.settings.reducedMotion ? 'instant' : 'smooth' });
   if (state.settings.haptics) navigator.vibrate?.(10);
 });
 document.addEventListener('change', async event => {

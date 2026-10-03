@@ -43,6 +43,17 @@ export function spend(state: Universe, cost: Cost): boolean {
   for (const id of RESOURCE_IDS) state.resources[id] -= cost[id] ?? 0;
   return true;
 }
+export function timeToAfford(state: Universe, cost: Cost, production = rates(state)): number | null {
+  if (Object.entries(cost).some(([id, amount]) => !RESOURCE_IDS.includes(id as typeof RESOURCE_IDS[number]) || typeof amount !== 'number' || !Number.isFinite(amount) || amount < 0)) return null;
+  let seconds = 0;
+  for (const id of RESOURCE_IDS) {
+    const missing = Math.max(0, (cost[id] ?? 0) - state.resources[id]);
+    if (!missing) continue;
+    if (production[id] <= 0) return null;
+    seconds = Math.max(seconds, missing / production[id]);
+  }
+  return Number.isFinite(seconds) ? seconds : null;
+}
 export function upgradeCost(object: CelestialObject, id: UpgradeId): Cost {
   return Object.fromEntries(Object.entries(UPGRADES[id].cost).map(([key, value]) => [key, Math.ceil(value * BALANCE.costGrowth ** object.upgrades[id])])) as Cost;
 }

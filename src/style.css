@@ -27,6 +27,7 @@ canvas { display: block; width: 100%; height: 390px; touch-action: manipulation;
 .goal { border-top: 1px solid var(--line); padding: 24px; background: #11253380; }
 .goal strong { display: block; font: 500 19px 'Space Grotesk', system-ui; margin-top: 8px; }
 .goal p { margin: 8px 0 0; font-size: 13px; color: var(--muted); line-height: 1.65; }
+.goal button { margin-top: 16px; }.progress-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 16px 0 8px; font-size: 12px; }.progress-heading strong { white-space: nowrap; color: var(--accent); }.estimate, .card p.estimate { font-size: 11px; margin: 8px 0 0; }
 .worlds { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 24px; }
 .world-chip { padding: 8px 12px; font-size: 12px; background: transparent; }
 .world-chip[aria-pressed=true] { color: var(--accent); border-color: #9ee9d955; background: #9ee9d90a; }

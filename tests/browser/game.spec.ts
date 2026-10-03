@@ -124,3 +124,16 @@ test('open civilization histories stay with their civilization when following re
   await expect(history).toHaveAttribute('open', '');
   await expect(page.locator(`details[data-details-key="${b.id}"]`)).not.toHaveAttribute('open', '');
 });
+
+test('the suggested step opens its world and shows evolution and upgrade estimates', async ({ page }) => {
+  const state = createUniverse(41, Date.now()); state.selectedId = 'star-0';
+  await page.addInitScript(({ key, save }) => localStorage.setItem(key, save), { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Solace', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Develop Aurelia', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
+  await expect(page.getByRole('progressbar', { name: 'Evolution toward complex life' })).toBeVisible();
+  await expect(page.locator('.card').filter({ hasText: 'Solar collection' })).toContainText('Ready to build');
+  await expect(page.locator('.card').filter({ hasText: 'Ocean expansion' })).toContainText('at 1× production');
+  await page.screenshot({ path: `artifacts/phase-13-${test.info().project.name}.png`, fullPage: true });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});

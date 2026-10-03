@@ -1,6 +1,6 @@
 import { BALANCE, UPGRADES } from '../core/config.ts';
 import { selectedObject } from '../core/universe.ts';
-import { canAfford, upgradeCost } from '../simulation/economy.ts';
+import { canAfford, rates, timeToAfford, upgradeCost } from '../simulation/economy.ts';
 import { costText, duration, escape } from './format.ts';
 import type { Universe, UpgradeId } from '../core/types.ts';
 import { civilizationPanel, researchPanel } from './civilizations.ts';
@@ -10,7 +10,7 @@ import { atlasPanel } from './atlas.ts';
 import { advancedPanel } from './advanced.ts';
 import { discoveriesPanel } from './discoveries.ts';
 import { offlineCap } from '../core/meta.ts';
-import { hasTechnology } from '../simulation/civilizations.ts';
+import { affordabilityEstimate, lifeProgress } from './progress.ts';
 import { journalPanel } from './journal.ts';
 import { prestigePanel } from './prestige.ts';
 export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'atlas' | 'discoveries' | 'prestige' | 'events' | 'settings';
@@ -29,13 +29,14 @@ export function panelContent(state: Universe, panel: Panel): string {
   if (panel === 'research') return researchPanel(state);
   if (panel === 'explore') return explorationPanel(state);
   if (panel === 'develop') {
+    const production = rates(state);
     if (!object.planet) return `<h2>${escape(object.name)}</h2><p>${object.type.replace('-', ' ')} · ${object.stellar ? `${object.stellar.class}, ${object.stellar.stage}. Fuel remaining ${Math.round(object.stellar.fuel * 100)}%. Luminosity ${object.stellar.luminosity.toFixed(2)} solar units.` : 'A small piece of your universe.'}</p><p>Select a planet to develop its environment.</p>`;
     return `<div class="eyebrow">YOUR FIRST WORLD</div><h2>${escape(object.name)}</h2><p class="muted">Small beginnings. Endless possibilities.</p>
       <div class="metrics">${metric('Habitability', `${Math.round(object.planet.habitability * 100)}%`)}${metric('Water coverage', `${Math.round(object.planet.water * 100)}%`)}${metric('Atmosphere', `${Math.round(object.planet.atmosphere * 100)}%`)}${metric('Age', duration(state.time - object.createdAt))}</div>
-      <article class="card"><div class="card-title"><strong>${object.life?.stage === 'chemistry' ? 'The chemistry of possibility' : object.life?.stage === 'simple' ? 'A primitive ecosystem' : object.life?.stage === 'complex' ? 'An explosion of life' : 'Intelligent life'}</strong><span class="badge">${object.life?.species ?? 0} species</span></div><p>Biodiversity ${Math.round(object.planet.biodiversity * 100)}% · ${Math.round(object.planet.temperature - 273.15)}°C</p>${object.life ? `<div class="ecosystem">${Object.entries(object.life.populations).map(([key, value]) => `<div><span>${key}</span><meter aria-label="${key} abundance" min="0" max="1" value="${value}"></meter></div>`).join('')}</div>` : ''}</article>
+      <article class="card"><div class="card-title"><strong>${object.life?.stage === 'chemistry' ? 'The chemistry of possibility' : object.life?.stage === 'simple' ? 'A primitive ecosystem' : object.life?.stage === 'complex' ? 'An explosion of life' : 'Intelligent life'}</strong><span class="badge">${object.life?.species ?? 0} species</span></div><p>Biodiversity ${Math.round(object.planet.biodiversity * 100)}% · ${Math.round(object.planet.temperature - 273.15)}°C</p>${lifeProgress(state, object)}${object.life ? `<div class="ecosystem">${Object.entries(object.life.populations).map(([key, value]) => `<div><span>${key}</span><meter aria-label="${key} abundance" min="0" max="1" value="${value}"></meter></div>`).join('')}</div>` : ''}</article>
       <h3>Give your world a little care</h3><div class="cards">${(Object.keys(UPGRADES) as UpgradeId[]).map(id => {
         const upgrade = UPGRADES[id], cost = upgradeCost(object, id), level = object.upgrades[id];
-        return `<article class="card"><div class="card-title"><strong>${upgrade.name}</strong><span class="badge">${level}/${BALANCE.maxUpgrade}</span></div><p>${upgrade.description}</p>${button(level >= BALANCE.maxUpgrade ? 'Complete' : costText(cost), 'upgrade', id, level >= BALANCE.maxUpgrade || !canAfford(state, cost))}</article>`;
+        return `<article class="card"><div class="card-title"><strong>${upgrade.name}</strong><span class="badge">${level}/${BALANCE.maxUpgrade}</span></div><p>${upgrade.description}</p>${button(level >= BALANCE.maxUpgrade ? 'Complete' : costText(cost), 'upgrade', id, level >= BALANCE.maxUpgrade || !canAfford(state, cost))}${level < BALANCE.maxUpgrade ? `<p class="estimate">${affordabilityEstimate(timeToAfford(state, cost, production))}</p>` : ''}</article>`;
       }).join('')}</div>`;
   }
   if (panel === 'events') return journalPanel(state);
@@ -43,18 +44,4 @@ export function panelContent(state: Universe, panel: Panel): string {
     <article class="card"><h3>${escape(object.name)}</h3><div class="button-row">${button('Rename', 'rename', '', false, true)}${button(object.favorite ? 'Favorited' : 'Favorite', 'favorite', '', false, true)}</div></article><article class="card"><h3>Accessibility</h3>${(['reducedMotion', 'highContrast', 'largeText', 'sound', 'music', 'haptics'] as const).map(id => `<label class="toggle"><input type="checkbox" data-setting="${id}" ${state.settings[id] ? 'checked' : ''}>${({ reducedMotion: 'Reduced motion', highContrast: 'High contrast', largeText: 'Large text', sound: 'Discovery sounds', music: 'Ambient music', haptics: 'Haptics' })[id]}</label>`).join('')}</article>
     <article class="card"><h3>Your universe</h3><p>Seed ${state.seed} · ${duration(state.time)} old. Progress continues for up to ${duration(offlineCap(state))} while you are away. Live time controls accelerate active play.</p><div class="button-row">${button('Save now', 'save')}${button('Export save', 'export', '', false, true)}</div><label class="file-label">Import a save<input id="import-file" type="file" accept=".json,application/json"></label><p class="muted">Import replaces the current universe after a valid save is checked.</p>${button('Start fresh', 'reset', '', false, true)}</article>
   ${import.meta.env?.DEV ? `<article class="card"><details><summary>Developer tools</summary><p>Selected: ${escape(object.id)} · ${object.type} · mass ${object.mass.toFixed(2)} · time ${duration(state.time)}</p><div class="button-row">${[['resources', 'Add resources'], ['time', 'Advance 1h'], ['planet', 'Spawn planet'], ['civilization', 'Spawn civilization'], ['technology', 'Unlock technology'], ['kill', 'Collapse civilization'], ['event', 'Trigger event']].map(([value, label]) => button(label, 'debug', value, false, true)).join('')}</div><pre>${escape(JSON.stringify({ id: object.id, parent: object.parentId, orbit: object.orbit, environment: object.planet }, null, 2))}</pre></details></article>` : ''}</div>`;
-}
-export function nextGoal(state: Universe): { title: string; detail: string } {
-  if (state.totalUpgrades === 0) return { title: 'Catch your first starlight', detail: 'Buy Solar collection below. Your planet will produce more energy.' };
-  if (state.totalUpgrades < 2) return { title: 'Build your first little probe', detail: 'Buy a second upgrade to unlock orbital exploration.' };
-  if (state.objects['planet-0'].planet!.habitability < 0.7) return { title: 'Make room for complex life', detail: 'Stabilize the atmosphere and expand the oceans to reach 70% habitability.' };
-  if (state.exploration.completed.orbital === 0) return { title: 'Find your first companion', detail: 'Open Explore and send a probe beyond your world.' };
-  if (Object.keys(state.civilizations).length === 0) return { title: 'Wait for the first curious minds', detail: 'Nurture the ecosystem. Intelligent life emerges from healthy worlds.' };
-  if (!hasTechnology(state, 'spaceflight')) return { title: 'A civilization is finding its way', detail: 'Follow its history in Life. Research and gentle influence will open spaceflight.' };
-  if (Object.keys(state.systems).length === 1) return { title: 'Reach another star', detail: 'An interstellar expedition in Explore will discover new worlds.' };
-  if (!hasTechnology(state, 'interstellar')) return { title: 'Build a bridge between worlds', detail: 'Fusion, AI and gravity engineering open interstellar civilization.' };
-  if (Object.keys(state.galaxies).length === 1) return { title: 'Beyond the galactic horizon', detail: 'Launch a galactic expedition and chart a new reach.' };
-  if (!Object.values(state.megastructures).some(s => s.type === 'dyson' && s.status === 'complete')) return { title: 'Harvest the light of a star', detail: 'Guide a civilization toward Dyson structures and complete its first swarm.' };
-  if (state.meta.runs === 0) return { title: 'Carry your discoveries into a new universe', detail: 'Rebirth keeps the things you learned and unlocks permanent universal laws.' };
-  return { title: 'A world of possibilities', detail: 'Build a thriving ecosystem. Your universe keeps growing while you are away.' };
 }

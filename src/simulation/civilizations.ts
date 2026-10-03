@@ -39,6 +39,11 @@ export function collapse(state: Universe, civ: Civilization, reason: string): vo
   civ.lastUpdate = state.time;
   civilizationEvent(state, civ, 'CivilizationCollapse', `${civ.name} fell silent`, `${reason} Their ruins and recorded history remain.`, 'danger');
 }
+export function researchRate(state: Universe, civ: Civilization): number {
+  if (civ.status !== 'active' || !civ.researching) return 0;
+  const planet = state.objects[civ.planetId].planet!, tech = TECHNOLOGIES[civ.researching];
+  return BALANCE.civilization.research * civ.science * civ.energy * (0.5 + civ.infrastructure) * civ.domains[tech.domain] * Math.max(1, Math.log10(civ.population) / 3) * (civ.supportUntil > state.time ? 1.5 : 1) * (1 + state.meta.laws.research * META_BALANCE.researchPerLevel) / (1 + Math.abs(planet.gravity - 1) * 0.3);
+}
 export function simulateCivilizations(state: Universe): void {
   const occupied = new Set(Object.values(state.civilizations).filter(c => c.status === 'active').flatMap(c => c.colonies));
   for (const object of Object.values(state.objects)) if (object.life?.stage === 'intelligent' && !state.civilizations[`civ-${object.id}`] && !occupied.has(object.id)) foundCivilization(state, object.id);
@@ -67,8 +72,7 @@ export function simulateCivilizations(state: Universe): void {
     }
     if (civ.researching) {
       const id = civ.researching, tech = TECHNOLOGIES[id];
-      const research = seconds * BALANCE.civilization.research * civ.science * civ.energy * (0.5 + civ.infrastructure) * civ.domains[tech.domain] * Math.max(1, Math.log10(civ.population) / 3) * (civ.supportUntil > state.time ? 1.5 : 1);
-      const scaledResearch = research * (1 + state.meta.laws.research * META_BALANCE.researchPerLevel) / (1 + Math.abs(planet.gravity - 1) * 0.3);
+      const scaledResearch = seconds * researchRate(state, civ);
       civ.researchPoints += scaledResearch; civ.knowledge += scaledResearch;
       if (civ.researchPoints >= tech.cost) {
         civ.researchPoints -= tech.cost; civ.technologies.push(id); civ.researching = null; civ.level = Math.max(civ.level, tech.level);
