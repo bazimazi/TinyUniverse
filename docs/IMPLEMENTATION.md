@@ -93,3 +93,13 @@ Worker construction, loading, message-transfer and decoding failures fall back t
 When a saved return actually fails simulation, a persistent recovery card pauses progression and protects the save. Export, Settings and retry remain available; a successful retry credits the original gap exactly once and resumes saving. Failed imports preserve the playable current universe. Existing save schemas remain compatible.
 
 Validation: 74 headless tests, 28 desktop/portrait browser checks, four production offline checks, production build, 24-hour benchmark and 32-seed playthrough gates. Tests cover worker failures and timeouts, late replies, validation failures, capped/rolled-back clocks, blocked asset requests, paused save protection, escaping, exports, successful retry and failed-import isolation. Production checks restore a large save without a network when workers are unavailable. Recovery cards were visually reviewed at desktop and 390px portrait sizes. The 24-hour benchmark completed in approximately one second on this machine; physical-phone performance remains unverified.
+
+Phase 16 commit: `1cb755e`.
+
+## Follow-up phase 17: orbital pull and consistent influence
+
+The planned orbital pull moves a planet inward, warms its climate and shortens its period. It shares a 90-second recovery with orbital push, including cooldowns in older saves. Both directions show radius and temperature previews and use their actual bounded movement to calculate period and climate. Planet orbits stop at radii 60–800 in normalized game units, with a one-second minimum period. Gravity changes preserve the minimum period of companions.
+
+Manual controls, actions and civilization automation now share influence readiness checks. Settled terraforming, capped gravity, existing shelter/support, funded research, incorrect targets and unavailable orbits cannot charge resources or start cooldowns. Capture supports parentless asteroids, preserves existing planetary companions and requires a planet in the same system. Unknown and inherited action names are rejected before spending. Gift support is extended without shortening existing aid.
+
+Validation: 81 headless tests, 30 desktop/portrait browser checks, four production offline checks, production build, 24-hour benchmark and 32-seed playthrough gates. Regressions cover clipped movement, push/pull reversal and shared recovery, legacy cooldown saves, bounds, hot climates, minimum periods, rejected-action atomicity, parentless capture, planetless systems and read-only readiness. Browser checks verify previews, disabled capped actions, saved movement and recovery after reload. Influence cards were visually reviewed at desktop and 390px portrait sizes.

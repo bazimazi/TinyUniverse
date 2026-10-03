@@ -8,6 +8,7 @@ export const BALANCE = {
   civilization: { basePopulation: 1000, growth: 0.0008, capacity: 1e7, research: 1.5, collapseDelay: 180, maxHistory: 48 }
 };
 export const SAVE_VERSION = 10;
+export const INFLUENCE_BALANCE = { orbitMin: 60, orbitMax: 800, orbitFactor: 1.12, gravityMin: 0.25, gravityMax: 4 };
 export const META_BALANCE = { lawBaseCost: 3, maxLaw: 20, productionPerLevel: 0.15, evolutionPerLevel: 0.1, researchPerLevel: 0.12, maxOfflineDays: 7 };
 export const DISCOVERY_BALANCE = { anomalyChance: 0.3, maxAnomalies: 64, investigation: 60, resolution: 90, rewardKnowledge: 350, rewardExotic: 60 };
 export const ADVANCED_BALANCE = { diplomacyInterval: 600, maxStructures: 64, maxRelations: 512, warLoss: 0.04, allianceAt: 60, tradeAt: 25, warAt: -45 };

@@ -3,7 +3,7 @@ import { TECHNOLOGIES } from '../core/technology.ts';
 import { hasTechnology } from '../simulation/civilizations.ts';
 import { buyUpgrade, canAfford, upgradeCost } from '../simulation/economy.ts';
 import { explorationAvailability, startExploration } from './exploration.ts';
-import { ABILITIES, useAbility } from './abilities.ts';
+import { ABILITIES, abilityReadiness, useAbility } from './abilities.ts';
 import type { ExploreKind, Universe, UpgradeId } from '../core/types.ts';
 
 type AutomationId = keyof Universe['automation'];
@@ -42,7 +42,7 @@ function interventionPlan(state: Universe, kind: 'assist' | 'research'): { abili
       actions.push({ ability: 'inspire', targetId: civ.planetId });
     }
   }
-  return actions.filter(({ ability, targetId }) => (state.cooldowns[`${ability}:${targetId}`] ?? 0) <= state.time && canAfford(state, ABILITIES[ability].cost));
+  return actions.filter(({ ability, targetId }) => abilityReadiness(state, ability, targetId).ok);
 }
 
 export function automationStatus(state: Universe, id: AutomationId): string {

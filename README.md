@@ -29,6 +29,8 @@ AI unlocks optional automation in Rebirth. It works every minute of universe tim
 
 Offline returns recover automatically when a worker fails to load or stalls. A simulation error pauses progress and protects the saved universe, with export, retry and backup import available from the recovery card.
 
+Spaceflight unlocks orbital push and pull in Influence. Previews show the resulting orbit and climate; both directions share a recovery period. Influence controls explain unavailable targets and limits before spending resources.
+
 Suggested steps open the relevant world and panel. Evolution and research bars estimate the next milestone in universe time; upgrade cards estimate resource waiting time at 1× production. `npm run playtest` reports progression over 32 fixed seeds under a repeatable active-care policy. These checks complement human playtesting.
 
 On phones, panel navigation stays at the bottom of the screen. The observatory stops drawing off-screen while the universe keeps evolving. Reduced motion lowers drawing frequency, and a keyboard skip link opens game controls directly.

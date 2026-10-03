@@ -270,3 +270,27 @@ test('an imported universe that fails simulation leaves the current game playabl
   const after = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
   expect(after.seed).toBe(before); expect(after.objects['planet-0'].upgrades.solar).toBe(1);
 });
+
+test('orbital pull previews climate, saves movement and shares recovery with push', async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(41, timestamp);
+  foundCivilization(state, 'planet-0').technologies = ['spaceflight', 'gravity'];
+  state.resources.energy = state.resources.matter = state.resources.knowledge = 10000;
+  state.objects['planet-0'].orbit!.radius = 800; state.objects['planet-0'].planet!.gravity = 4;
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, save); }, { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
+  await page.clock.pauseAt(new Date(timestamp + 1000)); await page.getByRole('button', { name: 'Influence', exact: true }).click();
+  await expect(page.locator('[data-ability="push"] button')).toBeDisabled();
+  await expect(page.locator('[data-ability="push"]')).toContainText('cannot move farther outward');
+  await expect(page.locator('[data-ability="gravityUp"] button')).toBeDisabled();
+  await expect(page.locator('[data-ability="pull"]')).toContainText('temperature 288K → 304K');
+  await page.locator('[data-ability="pull"] button').click();
+  await expect(page.locator('[data-ability="push"] button')).toBeDisabled(); await expect(page.locator('[data-ability="pull"] button')).toBeDisabled();
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.objects['planet-0'].orbit.radius).toBeCloseTo(800 / 1.12, 8);
+  expect(saved.objects['planet-0'].planet.temperature).toBeGreaterThan(288);
+  await page.locator('[data-ability="pull"]').screenshot({ path: `artifacts/phase-17-${test.info().project.name}.png` });
+  await page.reload(); await page.getByRole('button', { name: 'Influence', exact: true }).click();
+  await expect(page.locator('[data-ability="pull"] button')).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
