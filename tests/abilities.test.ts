@@ -6,7 +6,8 @@ import { assertUniverse } from '../src/core/invariants.ts';
 import { influencePanel } from '../src/ui/influence.ts';
 import { deserialize, serialize } from '../src/persistence/save.ts';
 import { advance } from '../src/simulation/engine.ts';
-import { foundCivilization } from '../src/simulation/civilizations.ts';
+import { foundCivilization, civilizationAt, collapse } from '../src/simulation/civilizations.ts';
+import { civilizationPanel, researchPanel } from '../src/ui/civilizations.ts';
 test('interventions cost resources, respect cooldowns and alter conditions', () => {
   const state = createUniverse(3, 0); state.resources.energy = 10000; state.resources.matter = 10000;
   const water = state.objects['planet-0'].planet!.water;
@@ -90,4 +91,27 @@ test('influence readiness is read-only and UI shares funded research and target 
   const original = structuredClone(state); assert.equal(abilityReadiness(state, 'inspire', civ.planetId).reason, 'opportunity');
   assert.match(influencePanel(state), /Wait for a new research question/); assert.deepEqual(state, original);
   assert.equal(useAbility(state, 'inspire', civ.planetId).ok, false); assert.deepEqual(state, original);
+});
+
+test('colony gifts and inspiration support the owner with civilization-wide saved recovery', () => {
+  const state = influenceUniverse(), civ = Object.values(state.civilizations)[0], colony = makeObject(state.seed, 'colony', 'planet', 'star-0');
+  state.objects[colony.id] = colony; state.objects['star-0'].children.push(colony.id); civ.colonies.push(colony.id); civ.researching = 'spaceflight';
+  state.selectedId = colony.id; assert.equal(useAbility(state, 'gift', colony.id).ok, true); assert.equal(civ.supportUntil, 600);
+  assert.equal(useAbility(state, 'inspire', colony.id).ok, true); assert.equal(civ.researchPoints, 120);
+  const saved = deserialize(serialize(state)), original = structuredClone(saved);
+  for (const target of [civ.planetId, colony.id]) for (const id of ['gift', 'inspire']) assert.equal(useAbility(saved, id, target).ok, false);
+  assert.deepEqual(saved, original); assert.match(influencePanel(saved), /Recovery is shared across their worlds/);
+  saved.time = 120; assert.equal(useAbility(saved, 'inspire', civ.planetId).ok, true);
+  assert.match(civ.timeline.at(-1)!.detail, new RegExp(colony.name)); assertUniverse(saved);
+});
+test('colony context prefers a living owner over ruins and world links escape imported names', () => {
+  const state = influenceUniverse(), former = Object.values(state.civilizations)[0], colony = makeObject(state.seed, 'settled-world', 'planet', 'star-0');
+  state.objects[colony.id] = colony; state.objects['star-0'].children.push(colony.id); collapse(state, former, 'Test collapse.');
+  const owner = foundCivilization(state, colony.id); owner.colonies.push(former.planetId); owner.name = 'Living owner'; former.traits = ['<img src=x>'];
+  state.objects[former.planetId].name = '<b>New colony</b>'; state.selectedId = former.planetId;
+  assert.equal(civilizationAt(state, state.selectedId), owner); assert.match(researchPanel(state), /Living owner chooses research/);
+  assert.match(civilizationPanel(state), /Visit &lt;b&gt;New colony&lt;\/b&gt;/); assert.doesNotMatch(civilizationPanel(state), /<img src=x>/);
+  assert.equal(useAbility(state, 'gift', former.planetId).ok, true); assert.equal(owner.supportUntil, 600); assert.equal(former.supportUntil, 0);
+  collapse(state, owner, 'Test collapse.'); const original = structuredClone(state);
+  assert.equal(useAbility(state, 'gift', former.planetId).ok, false); assert.deepEqual(state, original); assertUniverse(state);
 });

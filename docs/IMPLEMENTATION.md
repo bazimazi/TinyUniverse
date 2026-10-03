@@ -115,3 +115,13 @@ While an automatic expedition waits to launch, other automations retain its requ
 Save schema 11 adds the mining toggle. Versions 1–10 migrate with mining disabled, preserving existing preferences and progression. New saves validate the toggle strictly, exports retain it, and rebirth resets it along with the other local automation choices.
 
 Validation: 89 headless tests, 32 desktop/portrait browser checks, four production offline checks, production build, two 24-hour benchmarks and 32-seed playthrough gates. Regressions cover target priority, resource costs, one-time rewards, continuous income, all automation reservations, unrelated spending, migration/preferences, invalid toggles, rebirth and return totals. Browser checks verify migration, opting in, saved outposts and reload; production tests run mining through the cached worker with the network disabled. Mining and return cards were visually reviewed at desktop and 390px portrait widths. The benchmark with 48 detailed systems, 64 galaxies, 160 objects, every automation enabled and 16 mined asteroids completed in approximately 1.4 seconds on this machine, within the two-second budget. Physical-phone performance remains unverified.
+
+Phase 18 commit: `b814066`.
+
+## Follow-up phase 19: colonies and responsive diplomacy
+
+Civilization cards list colonies and let players visit them. Research, Influence and construction controls resolve the living owner of a settled world, even when the world also retains an extinct civilization’s record. Gifts and inspiration support that owner from any colony, share recovery across its worlds and record the recipient world in its history. Construction explicitly identifies the civilization’s home system. Imported names and traits are escaped in these cards.
+
+Mediation raises trust, immediately updates war/trade/alliance status and records the intervention in both histories. Its controls and action share readiness checks; archived relationships, maximum trust, invalid identifiers and insufficient funds cannot charge resources. Archived agreements retain their last recorded status. A civilization that collapses during one conflict is excluded from subsequent pairs in the same diplomacy update.
+
+Validation: 94 headless tests, 34 desktop/portrait browser checks, four production offline checks, production build, both 24-hour benchmarks and 32-seed playthrough gates. New regressions cover immediate peace/alliance, saved agreements, rejected-action atomicity, collapse during diplomacy, colony ownership, shared recovery after save/reload and escaped imported text. Colony and diplomacy cards were visually reviewed at 390px portrait width. Existing save schema 11 remains compatible; progression balance is unchanged.

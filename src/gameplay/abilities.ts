@@ -4,7 +4,7 @@ import { TECHNOLOGIES } from '../core/technology.ts';
 import { logEvent } from '../core/universe.ts';
 import { canAfford, spend } from '../simulation/economy.ts';
 import { habitability } from '../simulation/life.ts';
-import { hasTechnology, civilizationEvent } from '../simulation/civilizations.ts';
+import { hasTechnology, civilizationAt, civilizationEvent } from '../simulation/civilizations.ts';
 export const ABILITIES: Record<string, { name: string; description: string; cost: Cost; cooldown: number; requires: string | null; target: 'planet' | 'civilization' | 'asteroid' }> = {
   terraform: { name: 'Gentle terraforming', description: 'Warm or cool toward 288K. Improve water and atmosphere.', cost: { energy: 250, matter: 100 }, cooldown: 90, requires: null, target: 'planet' },
   fertility: { name: 'Seed biodiversity', description: 'Introduce resilient organisms and accelerate evolution.', cost: { biology: 80, matter: 60 }, cooldown: 120, requires: null, target: 'planet' },
@@ -26,14 +26,16 @@ export function orbitAfterInfluence(object: CelestialObject, id: 'push' | 'pull'
 }
 export function abilityCooldown(state: Universe, id: string, targetId: string): number {
   const keys = id === 'push' || id === 'pull' ? ['push', 'pull'] : [id];
-  return Math.max(0, ...keys.map(key => (state.cooldowns[`${key}:${targetId}`] ?? 0) - state.time));
+  const civ = id === 'gift' || id === 'inspire' ? civilizationAt(state, targetId, true) : undefined;
+  const targets = civ ? new Set([civ.planetId, ...civ.colonies]) : [targetId];
+  return Math.max(0, ...[...targets].flatMap(target => keys.map(key => (state.cooldowns[`${key}:${target}`] ?? 0) - state.time)));
 }
 export interface AbilityReadiness extends ActionResult { reason: 'ready' | 'locked' | 'target' | 'opportunity' | 'cooldown' | 'resources'; cooldown: number }
 export function abilityReadiness(state: Universe, id: string, targetId: string): AbilityReadiness {
   const fail = (reason: AbilityReadiness['reason'], message: string, cooldown = 0): AbilityReadiness => ({ ok: false, reason, message, cooldown });
   if (!Object.hasOwn(ABILITIES, id) || !Object.hasOwn(state.objects, targetId)) return fail('target', 'Choose a valid world and influence.');
   const ability = ABILITIES[id], object = state.objects[targetId];
-  const civ = Object.values(state.civilizations).find(c => c.planetId === targetId && c.status === 'active');
+  const civ = civilizationAt(state, targetId, true);
   if (ability.requires && !hasTechnology(state, ability.requires)) return fail('locked', `Requires ${TECHNOLOGIES[ability.requires].name} research.`);
   if (ability.target === 'planet' && !object.planet || ability.target === 'civilization' && !civ || ability.target === 'asteroid' && object.type !== 'asteroid') return fail('target', `This influence needs ${ability.target === 'asteroid' ? 'an' : 'a'} ${ability.target}.`);
   if (id === 'terraform' && object.planet!.water >= 1 && object.planet!.atmosphere >= 1 && Math.abs(object.planet!.temperature - 288) <= 0.01) return fail('opportunity', 'Water, atmosphere and temperature are already settled.');
@@ -58,9 +60,9 @@ export function abilityReadiness(state: Universe, id: string, targetId: string):
 export function useAbility(state: Universe, id: string, targetId: string): ActionResult {
   const readiness = abilityReadiness(state, id, targetId);
   if (!readiness.ok) return readiness;
-  const ability = ABILITIES[id], object = state.objects[targetId], civ = Object.values(state.civilizations).find(c => c.planetId === targetId && c.status === 'active');
+  const ability = ABILITIES[id], object = state.objects[targetId], civ = civilizationAt(state, targetId, true);
   spend(state, ability.cost);
-  state.cooldowns[`${id}:${targetId}`] = state.time + ability.cooldown;
+  state.cooldowns[`${id}:${ability.target === 'civilization' ? civ!.planetId : targetId}`] = state.time + ability.cooldown;
   if (id === 'push' || id === 'pull') for (const key of ['push', 'pull']) state.cooldowns[`${key}:${targetId}`] = state.time + ability.cooldown;
   if (id === 'terraform') { const p = object.planet!; p.temperature += (288 - p.temperature) * 0.5; p.water = Math.min(1, p.water + 0.06); p.atmosphere = Math.min(1, p.atmosphere + 0.06); }
   if (id === 'fertility') { object.life!.progress += 90; object.upgrades.biodiversity = Math.min(20, object.upgrades.biodiversity + 1); }
@@ -79,7 +81,7 @@ export function useAbility(state: Universe, id: string, targetId: string): Actio
     object.orbit = { radius: 42, period: 32, eccentricity: 0.02, phase: 0 };
   }
   if (object.planet) object.planet.habitability = habitability(object, state);
-  if (civ) civilizationEvent(state, civ, 'Intervention', `${civ.name}: ${ability.name}`, ability.description);
+  if (civ) civilizationEvent(state, civ, 'Intervention', `${civ.name}: ${ability.name}`, `${object.name}: ${ability.description}`);
   else logEvent(state, 'Intervention', targetId, `${object.name}: ${ability.name}`, ability.description);
   return { ok: true, message: 'A small intervention. A different future.' };
 }

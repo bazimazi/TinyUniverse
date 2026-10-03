@@ -9,6 +9,7 @@ import { foundCivilization } from '../../src/simulation/civilizations.ts';
 import { TECHNOLOGIES } from '../../src/core/technology.ts';
 import { findAnomaly } from '../../src/gameplay/discoveries.ts';
 import { simulateDiscoveries } from '../../src/simulation/discoveries.ts';
+import { collapse } from '../../src/simulation/civilizations.ts';
 test('first upgrade, selection, accessible settings and reload', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
@@ -26,6 +27,43 @@ test('first upgrade, selection, accessible settings and reload', async ({ page }
   await expect(page.locator('#rate-energy')).toHaveText('+4.0 /s');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(errors).toEqual([]);
+});
+
+test('colony navigation, shared support and immediate mediation persist across reload', async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(12, timestamp);
+  const colony = makeObject(state.seed, 'managed-colony', 'planet', 'star-0'), neighbor = makeObject(state.seed, 'neighbor', 'planet', 'star-0');
+  colony.name = 'Quiet shore'; neighbor.name = 'Other shore';
+  for (const world of [colony, neighbor]) { state.objects[world.id] = world; state.objects['star-0'].children.push(world.id); }
+  const civ = foundCivilization(state, 'planet-0'), other = foundCivilization(state, neighbor.id);
+  civ.name = 'Shore keepers'; civ.colonies.push(colony.id); civ.researching = 'spaceflight'; civ.technologies = ['spaceflight']; other.technologies = ['spaceflight'];
+  const id = [civ.id, other.id].sort().join('|'); state.relations[id] = { id, a: civ.id, b: other.id, score: -60, status: 'war', lastUpdate: 0 };
+  const ruin = makeObject(state.seed, 'ruin', 'planet', 'star-0'); state.objects[ruin.id] = ruin; state.objects['star-0'].children.push(ruin.id);
+  const fallen = foundCivilization(state, ruin.id); collapse(state, fallen, 'Test collapse.');
+  const archivedId = [civ.id, fallen.id].sort().join('|'); state.relations[archivedId] = { id: archivedId, a: civ.id, b: fallen.id, score: -60, status: 'war', lastUpdate: 0 };
+  state.resources.energy = state.resources.minerals = state.resources.knowledge = 10000;
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, save); }, { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await page.clock.pauseAt(new Date(timestamp + 1000));
+  await page.getByRole('button', { name: 'Life', exact: true }).click();
+  const civCard = page.locator('.card').filter({ hasText: 'Shore keepers' }).filter({ has: page.locator('summary', { hasText: 'Colonies' }) });
+  await civCard.getByText('Colonies · 1', { exact: true }).click(); await civCard.getByRole('button', { name: 'Visit Quiet shore', exact: true }).click();
+  await page.getByRole('button', { name: 'Develop', exact: true }).click(); await expect(page.getByRole('heading', { name: 'Quiet shore', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Influence', exact: true }).click();
+  const gift = page.locator('[data-ability="gift"]'); await expect(gift).toContainText('Supports Shore keepers across 2 settled worlds');
+  await gift.getByRole('button').click(); await page.locator('[data-ability="inspire"]').getByRole('button').click();
+  await page.getByRole('button', { name: 'Life', exact: true }).click();
+  const relation = page.locator('[data-relation]').filter({ hasText: 'Shore keepers & ' + other.name });
+  await relation.getByRole('button', { name: /Mediate/ }).click(); await expect(relation).toContainText('neutral · trust -30 / 100');
+  const archived = page.locator('[data-relation]').filter({ hasText: fallen.name }); await expect(archived).toContainText('Archived · last recorded war'); await expect(archived.getByRole('button')).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Visit home world', exact: true })).toBeVisible();
+  await page.locator('#panel').screenshot({ path: `artifacts/phase-19-colonies-${test.info().project.name}.png` });
+  await page.getByRole('button', { name: 'Visit home world', exact: true }).click(); await page.getByRole('button', { name: 'Influence', exact: true }).click();
+  await expect(page.locator('[data-ability="gift"]').getByRole('button')).toBeDisabled(); await expect(page.locator('[data-ability="inspire"]').getByRole('button')).toBeDisabled();
+  await page.reload(); await page.getByRole('button', { name: 'Life', exact: true }).click(); await expect(relation).toContainText('neutral · trust -30 / 100');
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.civilizations[civ.id].supportUntil).toBeGreaterThan(saved.time); expect(saved.civilizations[civ.id].researchPoints).toBe(120);
+  expect(saved.cooldowns['gift:planet-0']).toBeGreaterThan(saved.time); expect(saved.relations[id].status).toBe('neutral');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test('atlas, codex, rename and rebirth remain usable in portrait and desktop', async ({ page }) => {
   const state = createUniverse(12, Date.now()); generateSystem(state, 0); discoverGalaxy(state, 1);
