@@ -10,6 +10,7 @@ import { TECHNOLOGIES } from '../../src/core/technology.ts';
 import { findAnomaly } from '../../src/gameplay/discoveries.ts';
 import { simulateDiscoveries } from '../../src/simulation/discoveries.ts';
 import { collapse } from '../../src/simulation/civilizations.ts';
+import { SAVE_VERSION } from '../../src/core/config.ts';
 test('first upgrade, selection, accessible settings and reload', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
@@ -63,6 +64,30 @@ test('colony navigation, shared support and immediate mediation persist across r
   const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
   expect(saved.civilizations[civ.id].supportUntil).toBeGreaterThan(saved.time); expect(saved.civilizations[civ.id].researchPoints).toBe(120);
   expect(saved.cooldowns['gift:planet-0']).toBeGreaterThan(saved.time); expect(saved.relations[id].status).toBe('neutral');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('stellar warnings offer fusion suppression and protection survives reload and offline arrival', async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(7, timestamp); advance(state, 900);
+  const civ = Object.values(state.civilizations)[0] ?? foundCivilization(state, 'planet-0'); civ.technologies = ['fusion'];
+  state.resources.energy = state.resources.knowledge = 10000;
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, save); }, { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await page.clock.pauseAt(new Date(timestamp + 1000));
+  await expect(page.locator('[data-stellar-activity]')).toContainText('Flare expected in');
+  await page.getByRole('button', { name: 'Observe Solace', exact: true }).click(); await page.getByRole('button', { name: 'Stellar influence', exact: true }).click();
+  await expect(page.locator('[data-ability]').first()).toHaveAttribute('data-ability', 'suppress');
+  const suppress = page.locator('[data-ability="suppress"]'); await suppress.getByRole('button').click();
+  await expect(page.locator('[data-stellar-activity]')).toContainText('Stellar suppression covers its arrival'); await expect(suppress.getByRole('button')).toBeDisabled();
+  await suppress.screenshot({ path: `artifacts/phase-20-suppression-${test.info().project.name}.png` });
+  await page.reload(); await expect(page.locator('[data-stellar-activity]')).toContainText('Stellar suppression covers its arrival');
+  await page.locator('[data-stellar-activity]').screenshot({ path: `artifacts/phase-20-warning-${test.info().project.name}.png` });
+  await page.clock.fastForward(90000); await expect(page.locator('#offline-report')).toBeVisible();
+  await expect(page.locator('[data-stellar-activity]')).toContainText('Suppression remaining'); await expect(page.locator('[data-stellar-activity]')).not.toContainText('Flare expected');
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.version).toBe(SAVE_VERSION); expect(saved.objects['star-0'].stellar.flareAt).toBeNull();
+  expect(saved.events.filter((e: { type: string }) => e.type === 'StellarFlareSuppressed')).toHaveLength(1);
+  expect(saved.events.filter((e: { type: string }) => e.type === 'StellarFlareImpact')).toHaveLength(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test('atlas, codex, rename and rebirth remain usable in portrait and desktop', async ({ page }) => {
@@ -349,7 +374,7 @@ test('old saves opt into automatic mining, report new outposts and retain the ch
   await expect(page.locator('[data-automation-status="mine"]')).toContainText('Next: mining outpost on Little seam.');
   await page.clock.fastForward(60000); await expect(page.locator('#offline-report')).toContainText('1 mining outpost built');
   const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
-  expect(saved.version).toBe(11); expect(saved.automation.mine).toBe(true); expect(saved.objects[asteroid.id].mined).toBe(true);
+  expect(saved.version).toBe(SAVE_VERSION); expect(saved.automation.mine).toBe(true); expect(saved.objects[asteroid.id].mined).toBe(true);
   await page.locator('#offline-report').screenshot({ path: `artifacts/phase-18-return-${test.info().project.name}.png` });
   await page.getByRole('button', { name: 'Explore', exact: true }).click();
   const card = page.locator('.card').filter({ hasText: 'Little seam' }); await expect(card).toContainText('Mining outpost active.');

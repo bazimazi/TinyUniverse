@@ -7,13 +7,19 @@ export const BALANCE = {
   life: { simpleAt: 60, complexAt: 240, intelligentAt: 540, growth: 0.006, eventChance: 0.008, minimumHabitability: 0.35 },
   civilization: { basePopulation: 1000, growth: 0.0008, capacity: 1e7, research: 1.5, collapseDelay: 180, maxHistory: 48 }
 };
-export const SAVE_VERSION = 11;
+export const SAVE_VERSION = 12;
 export const INFLUENCE_BALANCE = { orbitMin: 60, orbitMax: 800, orbitFactor: 1.12, gravityMin: 0.25, gravityMax: 4 };
 export const META_BALANCE = { lawBaseCost: 3, maxLaw: 20, productionPerLevel: 0.15, evolutionPerLevel: 0.1, researchPerLevel: 0.12, maxOfflineDays: 7 };
 export const DISCOVERY_BALANCE = { anomalyChance: 0.3, maxAnomalies: 64, investigation: 60, resolution: 90, rewardKnowledge: 350, rewardExotic: 60 };
 export const ADVANCED_BALANCE = { diplomacyInterval: 600, maxStructures: 64, maxRelations: 512, warLoss: 0.04, allianceAt: 60, tradeAt: 25, warAt: -45 };
 export const GALAXY_BALANCE = { maxDetailedSystems: 48, maxGalaxies: 64, nearbyInterval: 120, backgroundInterval: 600, expansionInterval: 1800, cost: { energy: 8000, knowledge: 400 }, duration: 180, populationGrowth: 0.00001 };
-export const STELLAR_BALANCE = { lifetime: 86400 * 45, giantAt: 0.8, giantLuminosity: 2.5, remnantLuminosity: 0.025, interstellarCost: { energy: 2000, knowledge: 150 }, interstellarDuration: 120 };
+export const STELLAR_BALANCE = {
+  lifetime: 86400 * 45, giantAt: 0.8, giantLuminosity: 2.5, remnantLuminosity: 0.025,
+  interstellarCost: { energy: 2000, knowledge: 150 }, interstellarDuration: 120,
+  activityInterval: 900, flareWarning: 90, flareHeat: 8, suppressionDuration: 600,
+  flareChance: { 'red-dwarf': 0.18, yellow: 0.08, blue: 0.24 }, giantActivityMultiplier: 1.5,
+  magneticProtection: 0.8, atmosphereProtection: 0.4, flareAtmosphereLoss: 0.015, flareEcosystemLoss: 0.04
+};
 export const UPGRADES: Record<UpgradeId, { name: string; description: string; cost: Cost }> = {
   solar: { name: 'Solar collection', description: 'Harvest starlight. +2 energy / second.', cost: { minerals: 15, matter: 8 } },
   mining: { name: 'Deep mining', description: 'Reach rich seams. +1.5 minerals / second.', cost: { energy: 30, matter: 12 } },

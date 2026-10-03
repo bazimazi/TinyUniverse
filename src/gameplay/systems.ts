@@ -19,7 +19,7 @@ export function generateSystem(state: Universe, index: number, galaxyId = 'galax
   if (state.galaxies[galaxyId].surveyed >= state.galaxies[galaxyId].totalSystems) throw new Error('This galaxy is fully surveyed.');
   const seed = entitySeed(state.seed, id), rng = random(seed);
   const star = makeObject(state.seed, `${id}-star`, 'star', null);
-  star.systemId = id; star.createdAt = state.time; star.stellar = initialStar(index % 4 === 3 ? 8 + rng() * 3 : 0.4 + rng() * 2);
+  star.systemId = id; star.createdAt = state.time; star.stellar = initialStar(index % 4 === 3 ? 8 + rng() * 3 : 0.4 + rng() * 2, state.time);
   star.mass = star.stellar.solarMass * 330000; star.color = star.stellar.class === 'blue' ? '#a8cfff' : star.stellar.class === 'red-dwarf' ? '#ffa88c' : '#ffd39b';
   if (state.meta.activeModifiers.includes('unstable-stars')) star.stellar.lifespan *= 0.5;
   const angle = index * 2.399963, distance = 0.15 + Math.sqrt(index + 1) * 0.12;

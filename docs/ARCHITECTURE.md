@@ -7,14 +7,14 @@ Tiny Universe is a static mobile browser game with no production JavaScript depe
 | `core` | Serializable models, seeded RNG, generation defaults, configuration, tiers and invariants |
 | `simulation` | Economy, orbital calculations, ecology, civilization, stars, diplomacy, construction and aggregate populations |
 | `gameplay` | Validated player actions, exploration jobs, abilities, investigations, automation and rebirth |
-| `persistence` | Checksummed save envelopes, migrations 1–11, primary/backup saves and storage failures |
+| `persistence` | Checksummed save envelopes, migrations 1–12, primary/backup saves and storage failures |
 | `rendering` | Camera scales, bounded canvas draws, hit testing and reduced motion |
 | `ui` | Contextual panels, formatting, accessible controls and progressively unlocked navigation |
 | `audio` | Optional locally synthesized ambience and discovery tones |
 
 ## Simulation and time
 
-Production integrates analytically between boundaries. Live play and offline catch-up use the same engine. Exploration, investigations and construction split time at their exact deadlines. Decision boundaries occur every 30 seconds; neighboring worlds update at 120-second intervals and distant worlds at 600-second intervals. Population and ecological changes use analytical curves, rather than simulating individual organisms or people. Changing the focus can change the approximation tier; identical seeds, actions, focus and elapsed simulation time remain deterministic.
+Production integrates analytically between boundaries. Live play and offline catch-up use the same engine. Exploration, investigations, construction and warned flares split time at their exact deadlines. Decision boundaries occur every 30 seconds; neighboring worlds update at 120-second intervals and distant worlds at 600-second intervals. Population and ecological changes use analytical curves, rather than simulating individual organisms or people. Changing the focus can change the approximation tier; identical seeds, actions, focus and elapsed simulation time remain deterministic.
 
 Evolution and research estimates share rate functions with the engine. They describe current conditions in universe time, rather than promising a fixed completion date. The 32-seed active-care playthrough checks opening milestones and interstellar access; its policy and results are recorded separately from human playtesting.
 
@@ -29,6 +29,10 @@ A session clock uses monotonic frame time for active play and detects gaps over 
 Catch-up validates input and output state and checks worker credit against the exact requested gap, cap and timestamp. Worker transport failures or a 15-second timeout terminate the worker and run the same bounded engine on the untouched clone; late replies are ignored. Simulation/validation failures reject atomically. A failed saved return pauses simulation and saving while allowing export, inspection, backup import or retry, preserving the original timestamp until recovery. A failed import leaves the current universe playable. The inline fallback uses the main thread.
 
 ## Scale and persistence
+
+Schema 12 saves each star’s activity clock, pending flare deadline and suppression expiry. Versions 1–11 initialize activity at the saved simulation time, preserving previous climate, shelters, technology and automation. New systems initialize their clock at discovery. Every 900 seconds, seeded checks may warn of a flare arriving 90 seconds later. Red dwarfs, blue stars and giants are more active; the unstable-stars modifier doubles the chance. Remnants stop activity. Atmosphere and magnetic fields soften heat, atmosphere loss and ecosystem damage; planetary shields or stellar suppression prevent damage. Suppression never changes stellar aging. Witnessed and suppressed flares create separate deduplicated Codex records.
+
+Civilization context prefers an active owner over a world’s historical record. Colonies share gifts, inspiration and their civilization’s recovery timer; construction remains in the home system. Mediation applies trust/status changes immediately, retains both histories and refuses archived or fully trusted agreements. Diplomacy skips participants that collapsed earlier in the same update.
 
 Each seed describes many potential systems. At most 48 systems and 256 celestial objects become detailed state. Further surveys return aggregate data. Up to 64 galaxies store distant colony counts and populations, rather than thousands of individual entities. History, diplomacy and construction are bounded. Destroyed civilizations keep their histories and stop population/research updates.
 

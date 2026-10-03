@@ -1,11 +1,11 @@
 import type { ActionResult, CelestialObject, Cost, Universe } from '../core/types.ts';
-import { INFLUENCE_BALANCE } from '../core/config.ts';
+import { INFLUENCE_BALANCE, STELLAR_BALANCE } from '../core/config.ts';
 import { TECHNOLOGIES } from '../core/technology.ts';
 import { logEvent } from '../core/universe.ts';
 import { canAfford, spend } from '../simulation/economy.ts';
 import { habitability } from '../simulation/life.ts';
 import { hasTechnology, civilizationAt, civilizationEvent } from '../simulation/civilizations.ts';
-export const ABILITIES: Record<string, { name: string; description: string; cost: Cost; cooldown: number; requires: string | null; target: 'planet' | 'civilization' | 'asteroid' }> = {
+export const ABILITIES: Record<string, { name: string; description: string; cost: Cost; cooldown: number; requires: string | null; target: 'planet' | 'civilization' | 'asteroid' | 'star' }> = {
   terraform: { name: 'Gentle terraforming', description: 'Warm or cool toward 288K. Improve water and atmosphere.', cost: { energy: 250, matter: 100 }, cooldown: 90, requires: null, target: 'planet' },
   fertility: { name: 'Seed biodiversity', description: 'Introduce resilient organisms and accelerate evolution.', cost: { biology: 80, matter: 60 }, cooldown: 120, requires: null, target: 'planet' },
   protect: { name: 'Shelter a world', description: 'Prevent planetary hazards for ten minutes.', cost: { energy: 300, minerals: 100 }, cooldown: 300, requires: null, target: 'planet' },
@@ -15,7 +15,8 @@ export const ABILITIES: Record<string, { name: string; description: string; cost
   pull: { name: 'Orbital pull', description: 'Move the orbit inward. More starlight warms the climate. Shares recovery with orbital push.', cost: { energy: 500, matter: 150 }, cooldown: 90, requires: 'spaceflight', target: 'planet' },
   gravityUp: { name: 'Gravity boost', description: 'Increase gravity and shorten orbital periods.', cost: { energy: 1000, knowledge: 80 }, cooldown: 120, requires: 'gravity', target: 'planet' },
   gravityDown: { name: 'Gravity reduction', description: 'Reduce gravity; orbital periods become longer.', cost: { energy: 1000, knowledge: 80 }, cooldown: 120, requires: 'gravity', target: 'planet' },
-  capture: { name: 'Orbital capture', description: 'Capture an asteroid as a companion to a planet in its system.', cost: { energy: 1200, matter: 400 }, cooldown: 180, requires: 'gravity', target: 'asteroid' }
+  capture: { name: 'Orbital capture', description: 'Capture an asteroid as a companion to a planet in its system.', cost: { energy: 1200, matter: 400 }, cooldown: 180, requires: 'gravity', target: 'asteroid' },
+  suppress: { name: 'Suppress flare', description: 'Calm stellar activity for ten minutes, protecting every world in this system from flares.', cost: { energy: 1200, knowledge: 60 }, cooldown: 300, requires: 'fusion', target: 'star' }
 };
 export function orbitAfterInfluence(object: CelestialObject, id: 'push' | 'pull'): { radius: number; period: number; temperature: number } | null {
   if (!object.planet || !object.orbit) return null;
@@ -38,6 +39,7 @@ export function abilityReadiness(state: Universe, id: string, targetId: string):
   const civ = civilizationAt(state, targetId, true);
   if (ability.requires && !hasTechnology(state, ability.requires)) return fail('locked', `Requires ${TECHNOLOGIES[ability.requires].name} research.`);
   if (ability.target === 'planet' && !object.planet || ability.target === 'civilization' && !civ || ability.target === 'asteroid' && object.type !== 'asteroid') return fail('target', `This influence needs ${ability.target === 'asteroid' ? 'an' : 'a'} ${ability.target}.`);
+  if (ability.target === 'star' && (!object.stellar || object.stellar.stage === 'remnant' || object.type !== 'star')) return fail('target', 'Select a living star to suppress its flares.');
   if (id === 'terraform' && object.planet!.water >= 1 && object.planet!.atmosphere >= 1 && Math.abs(object.planet!.temperature - 288) <= 0.01) return fail('opportunity', 'Water, atmosphere and temperature are already settled.');
   if (id === 'push' || id === 'pull') {
     const next = orbitAfterInfluence(object, id);
@@ -45,6 +47,7 @@ export function abilityReadiness(state: Universe, id: string, targetId: string):
   }
   if (id === 'gravityUp' && object.planet!.gravity >= INFLUENCE_BALANCE.gravityMax || id === 'gravityDown' && object.planet!.gravity <= INFLUENCE_BALANCE.gravityMin) return fail('opportunity', 'Gravity has reached this influence limit.');
   if (id === 'protect' && object.shieldUntil >= state.time + 600) return fail('opportunity', 'This world already has at least ten minutes of shelter.');
+  if (id === 'suppress' && object.stellar!.suppressedUntil >= state.time + STELLAR_BALANCE.suppressionDuration) return fail('opportunity', 'This star already has at least ten minutes of suppression.');
   if (id === 'gift' && civ!.stability >= 1 && civ!.supportUntil >= state.time + 600) return fail('opportunity', 'This civilization already has stability and support.');
   if (id === 'inspire' && (!civ!.researching || civ!.researchPoints >= TECHNOLOGIES[civ!.researching].cost)) return fail('opportunity', 'Wait for a new research question.');
   if (id === 'capture') {
@@ -67,6 +70,7 @@ export function useAbility(state: Universe, id: string, targetId: string): Actio
   if (id === 'terraform') { const p = object.planet!; p.temperature += (288 - p.temperature) * 0.5; p.water = Math.min(1, p.water + 0.06); p.atmosphere = Math.min(1, p.atmosphere + 0.06); }
   if (id === 'fertility') { object.life!.progress += 90; object.upgrades.biodiversity = Math.min(20, object.upgrades.biodiversity + 1); }
   if (id === 'protect') object.shieldUntil = Math.max(object.shieldUntil, state.time + 600);
+  if (id === 'suppress') object.stellar!.suppressedUntil = Math.max(object.stellar!.suppressedUntil, state.time + STELLAR_BALANCE.suppressionDuration);
   if (id === 'gift') { civ!.stability = Math.min(1, civ!.stability + 0.12); civ!.supportUntil = Math.max(civ!.supportUntil, state.time + 600); }
   if (id === 'inspire') civ!.researchPoints += 120;
   if (id === 'push' || id === 'pull') { const next = orbitAfterInfluence(object, id)!; object.orbit!.radius = next.radius; object.orbit!.period = next.period; object.planet!.temperature = next.temperature; }

@@ -21,7 +21,7 @@ export interface CelestialObject {
   favorite: boolean; mined: boolean; deposit: number; life: Ecosystem | null; shieldUntil: number;
   systemId: string; stellar: StellarState | null; lastLifeUpdate: number;
 }
-export interface StellarState { class: 'red-dwarf' | 'yellow' | 'blue'; stage: 'main-sequence' | 'giant' | 'remnant'; solarMass: number; luminosity: number; temperature: number; lifespan: number; fuel: number; spin: number }
+export interface StellarState { class: 'red-dwarf' | 'yellow' | 'blue'; stage: 'main-sequence' | 'giant' | 'remnant'; solarMass: number; luminosity: number; temperature: number; lifespan: number; fuel: number; spin: number; lastActivityAt: number; flareAt: number | null; suppressedUntil: number }
 export interface StarSystem { id: string; seed: number; name: string; starId: string; position: { x: number; y: number }; galaxyId: string }
 export interface Galaxy { id: string; seed: number; name: string; totalSystems: number; surveyed: number; backgroundCivilizations: number; backgroundPopulation: number; lastUpdate: number }
 export type ExploreKind = 'orbital' | 'interstellar' | 'galactic';

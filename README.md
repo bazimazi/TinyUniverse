@@ -33,6 +33,8 @@ Spaceflight unlocks orbital push and pull in Influence. Previews show the result
 
 Life lists a civilization’s colonies with links to visit them. Gifts and research inspiration work from any settled world and share recovery across the civilization. Mediation changes the agreement immediately and records both histories; relationships with fallen civilizations remain archived.
 
+Stars warn 90 seconds before a flare in universe time. Atmospheres and magnetic fields soften radiation damage; Shelter a world prevents it locally. Observe a star in Develop or Explore, then open Stellar influence: fusion unlocks Suppress flare for ten minutes of protection across its system. Flares and successful suppression add distinct Codex entries. Existing saves gain the new stellar activity clock without replaying past hazards.
+
 Suggested steps open the relevant world and panel. Evolution and research bars estimate the next milestone in universe time; upgrade cards estimate resource waiting time at 1× production. `npm run playtest` reports progression over 32 fixed seeds under a repeatable active-care policy. These checks complement human playtesting.
 
 On phones, panel navigation stays at the bottom of the screen. The observatory stops drawing off-screen while the universe keeps evolving. Reduced motion lowers drawing frequency, and a keyboard skip link opens game controls directly.

@@ -12,12 +12,15 @@ test('production app caches its assets and launches without a network', async ({
   await page.getByLabel('Discovery sounds', { exact: true }).check(); await page.getByLabel('Ambient music', { exact: true }).check(); await page.getByLabel('Ambient music', { exact: true }).uncheck();
   const imported = createUniverse(77, Date.now() - 3600000); for (let i = 0; i < 9; i++) generateSystem(imported, i);
   foundCivilization(imported, 'planet-0').technologies = ['ai']; imported.automation.mine = true; imported.resources.energy = imported.resources.matter = 1000;
+  imported.objects['star-0'].stellar!.flareAt = 45; imported.objects['star-0'].stellar!.suppressedUntil = 3601;
   const asteroid = makeObject(imported.seed, 'offline-asteroid', 'asteroid', 'star-0'); imported.objects[asteroid.id] = asteroid; imported.objects['star-0'].children.push(asteroid.id);
   let workers = 0; page.on('worker', () => workers++); page.once('dialog', dialog => dialog.accept());
   await page.locator('#import-file').setInputFiles({ name: 'universe.json', mimeType: 'application/json', buffer: Buffer.from(serialize(imported)) });
   await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible();
   await expect(page.locator('#offline-report')).toContainText('1 mining outpost built');
   expect(await page.evaluate(({ key, id }) => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).objects[id].mined, { key: SAVE_KEY, id: asteroid.id })).toBe(true);
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.discoveries['cosmic:flare-suppressed']).toBeDefined(); expect(saved.objects['star-0'].stellar.lastActivityAt).toBe(3600);
   await expect(page.locator('#age')).toContainText('1.0h'); expect(workers).toBe(1);
   expect(errors).toEqual([]);
 });
@@ -29,10 +32,12 @@ test('cached production returns recover when workers are unavailable offline', a
   await page.evaluate(async () => { await navigator.serviceWorker.ready; if (!navigator.serviceWorker.controller) await new Promise<void>(resolve => navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true })); });
   await context.setOffline(true); await page.reload(); await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
   const imported = createUniverse(88, Date.now() - 3600000); for (let i = 0; i < 9; i++) generateSystem(imported, i);
+  imported.objects['star-0'].stellar!.flareAt = 45;
   page.once('dialog', dialog => dialog.accept());
   await page.locator('#import-file').setInputFiles({ name: 'universe.json', mimeType: 'application/json', buffer: Buffer.from(serialize(imported)) });
   await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible(); await expect(page.locator('#age')).toContainText('1.0h');
   await expect(page.locator('#return-recovery')).toBeHidden();
   const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
   expect(saved.seed).toBe(88); expect(saved.time).toBeGreaterThanOrEqual(3600); expect(errors).toEqual([]);
+  expect(saved.discoveries['cosmic:stellar-flare']).toBeDefined(); expect(saved.objects['star-0'].stellar.lastActivityAt).toBe(3600);
 });

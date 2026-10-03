@@ -8,7 +8,7 @@ export const MODIFIERS: Record<string, { name: string; description: string; runs
   'fast-evolution': { name: 'Fast evolution', description: 'Life evolves 60% faster.', runs: 1 },
   'high-gravity': { name: 'High gravity', description: 'Start at 1.6g. Civilizations must adapt.', runs: 2 },
   'ancient-universe': { name: 'Ancient universe', description: 'Begin with complex life and a mature environment.', runs: 3 },
-  'unstable-stars': { name: 'Unstable stars', description: 'Shorter stellar lifespans reveal remnants sooner.', runs: 4 }
+  'unstable-stars': { name: 'Unstable stars', description: 'Shorter stellar lifespans and twice the flare activity.', runs: 4 }
 };
 export function canRebirth(state: Universe): boolean { return hasTechnology(state, 'dyson') && Object.values(state.megastructures).some(s => s.status === 'complete' && s.type === 'dyson'); }
 export function rebirthReward(state: Universe): number {

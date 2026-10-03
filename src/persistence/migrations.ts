@@ -36,4 +36,7 @@ export function migrate(state: Universe): void {
   }
   if (state.version < 10) { state.meta = initialMeta(); state.automation = { explore: false, develop: false, assist: false, research: false, mine: false }; state.settings.music = false; state.settings.haptics = false; }
   if (state.version < 11) state.automation.mine = false;
+  if (state.version < 12) for (const object of Object.values(state.objects)) if (object.stellar) {
+    object.stellar.lastActivityAt = state.time; object.stellar.flareAt = null; object.stellar.suppressedUntil = 0;
+  }
 }

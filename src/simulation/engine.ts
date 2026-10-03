@@ -3,7 +3,7 @@ import { produce } from './economy.ts';
 import { completeExploration } from '../gameplay/exploration.ts';
 import { simulateLife } from './life.ts';
 import { simulateCivilizations } from './civilizations.ts';
-import { simulateStars } from './stars.ts';
+import { completeFlares, simulateStars } from './stars.ts';
 import { simulateGalaxies } from './galaxies.ts';
 import { completeStructures, simulateAdvanced } from './advanced.ts';
 import { advanceAnomalies } from '../gameplay/discoveries.ts';
@@ -19,12 +19,14 @@ export function advance(state: Universe, seconds: number): void {
     const decision = (Math.floor(state.time / BALANCE.decisionInterval) + 1) * BALANCE.decisionInterval;
     const anomalyDeadline = Math.min(end, ...Object.values(state.anomalies).map(a => a.nextAt ?? end));
     const constructionDeadline = Math.min(end, ...Object.values(state.megastructures).filter(s => s.status === 'building').map(s => Math.max(state.time, s.endsAt)));
-    const boundary = Math.min(end, state.exploration.job?.endsAt ?? end, decision, anomalyDeadline, constructionDeadline);
+    const flareDeadline = Math.min(end, ...Object.values(state.objects).map(o => o.stellar?.flareAt ?? end));
+    const boundary = Math.min(end, state.exploration.job?.endsAt ?? end, decision, anomalyDeadline, constructionDeadline, flareDeadline);
     const step = Math.max(0, boundary - state.time);
     produce(state, step); state.time = boundary;
     completeExploration(state);
     advanceAnomalies(state);
     completeStructures(state);
+    completeFlares(state);
     if (Math.abs(boundary - decision) < 1e-7) {
       simulateStars(state);
       simulateLife(state);
