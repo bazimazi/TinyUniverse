@@ -25,7 +25,7 @@ export function assertUniverse(state: Universe): void {
   }
   if (!state.exploration || !finite(state.exploration.completed.orbital)) throw new Error('Invalid exploration state.');
   const job = state.exploration.job;
-  if (job && (!['orbital', 'interstellar', 'galactic'].includes(job.kind) || !state.objects[job.targetId] || !finite(job.startedAt) || !finite(job.endsAt) || job.endsAt < state.time || !finite(job.index))) throw new Error('Invalid exploration job.');
+  if (job && (!['orbital', 'interstellar', 'galactic'].includes(job.kind) || !state.objects[job.targetId]?.planet || !finite(job.startedAt) || job.startedAt > state.time || !finite(job.endsAt) || job.endsAt <= job.startedAt || job.endsAt < state.time || !Number.isSafeInteger(job.index) || job.index < 0)) throw new Error('Invalid exploration job.');
   if (!state.galaxies || Object.values(state.galaxies).some(g => !finite(g.totalSystems, 1) || !finite(g.surveyed) || !finite(g.backgroundPopulation) || !finite(g.backgroundCivilizations))) throw new Error('Invalid galaxy aggregates.');
   if (!state.civilizations) throw new Error('Invalid civilizations.');
   if (!state.relations || !state.megastructures) throw new Error('Invalid advanced civilization state.');

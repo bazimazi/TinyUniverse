@@ -13,7 +13,7 @@ All ten requested development phases were implemented in order as runnable slice
 | 7. Galaxy | Lazy galaxy catalogs, simulation tiers, aggregate populations, colonization, camera scales and statistics atlas | `990e122` |
 | 8. Advanced civilizations | Archetypes, contact/trade/alliances/war, mediation, industry and four megastructure types | `192c9c8` |
 | 9. Discovery | Rare signals, branching investigations, ancient records, codex, artifacts, 120 milestones and personal records | `973eadd` |
-| 10. Prestige / endgame | Rebirth, Cosmic Knowledge, four laws, five modifiers, new seeds/start conditions, continuous meta production, late anomalies and AI automation | This phase's commit |
+| 10. Prestige / endgame | Rebirth, Cosmic Knowledge, four laws, five modifiers, new seeds/start conditions, continuous meta production, late anomalies and AI automation | `c7342ac` |
 
 Phase 10 also completes production offline caching, optional local audio, accessibility settings, renaming/favorites, progressive menus, worker catch-up, save validation/migrations, CI and final UX/performance fixes.
 
@@ -33,3 +33,11 @@ Each phase passed its build, domain tests, headless performance check and deskto
 Fixed repeated civilization/planet scans with an occupancy index; cached diplomacy counts; retained open histories and seed inputs during panel refresh; avoided replacing controls mid-click; made construction and investigation deadlines exact; corrected cross-system capture links and extinct-age records; validated imports before simulation; preserved corrupt saves; reclaimed expendable backup space on quota pressure; and fixed cached asset matching for offline production loads.
 
 The remaining product work is balancing, retention/playtesting, richer content and verification on target mobile hardware. Native-store packaging and astronomical-precision physics are outside this browser implementation.
+
+## Follow-up phase 11: progression safeguards
+
+Interstellar expeditions now choose the first uncharted procedural address in their destination galaxy. Galactic expeditions skip known reaches. At the detailed-world limit, distant surveys award knowledge; fully charted destinations stop accepting expedition costs. An expedition refunds its costs if its region fills before arrival. Procedural generation also enforces address and capacity limits directly, and imports reject invalid expedition origins and schedules.
+
+Player technology unlocks retain the recorded knowledge of fallen civilizations until rebirth. Extinct civilizations cannot build or resume research. Exploration controls reflect capacity limits, and expedition messages describe their destination.
+
+Validation: 46 headless tests, eight desktop/portrait browser checks, two production offline-launch checks, production build and the 24-hour benchmark. Six new regression tests cover destination collisions, bounds, refunds, aggregate surveys, collapse/rebirth unlocks and invalid expedition schedules. The benchmark completed in approximately 1.3 seconds on this machine.

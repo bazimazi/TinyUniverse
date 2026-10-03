@@ -30,7 +30,9 @@ export function foundCivilization(state: Universe, planetId: string): Civilizati
   civilizationEvent(state, civ, 'CivilizationFounded', `${civ.name} has emerged`, `The first settlements on ${state.objects[planetId].name}. Their story is their own.`, 'wonder');
   return civ;
 }
-export function hasTechnology(state: Universe, id: string): boolean { return Object.values(state.civilizations).some(civ => civ.status === 'active' && civ.technologies.includes(id)); }
+// Player unlocks retain discoveries recorded by fallen civilizations until rebirth.
+// Civilization actions still check that civilization's own status and technology.
+export function hasTechnology(state: Universe, id: string): boolean { return Object.values(state.civilizations).some(civ => civ.technologies.includes(id)); }
 export function collapse(state: Universe, civ: Civilization, reason: string): void {
   if (civ.status === 'extinct') return;
   civ.status = 'extinct'; civ.population = 0; civ.researching = null;

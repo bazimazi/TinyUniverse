@@ -3,11 +3,20 @@ import { initialStar } from '../core/stellar.ts';
 import { makeObject, logEvent } from '../core/universe.ts';
 import { BALANCE, GALAXY_BALANCE } from '../core/config.ts';
 import type { StarSystem, Universe } from '../core/types.ts';
+export function canDetailSystem(state: Universe): boolean {
+  return Object.keys(state.systems).length < GALAXY_BALANCE.maxDetailedSystems && Object.keys(state.objects).length <= BALANCE.maxObjects - 4;
+}
+export function nextSystemIndex(state: Universe, galaxyId: string): number {
+  let index = 0;
+  while (Object.hasOwn(state.systems, `${galaxyId}-system-${index}`)) index++;
+  return index;
+}
 export function generateSystem(state: Universe, index: number, galaxyId = 'galaxy-0'): StarSystem {
   const id = `${galaxyId}-system-${index}`;
-  if (state.systems[id]) return state.systems[id];
-  if (!Number.isInteger(index) || index < 0 || !state.galaxies[galaxyId]) throw new Error('Invalid procedural system address.');
-  if (Object.keys(state.systems).length >= GALAXY_BALANCE.maxDetailedSystems || Object.keys(state.objects).length > BALANCE.maxObjects - 4) throw new Error('The detailed simulation is full; distant sectors remain aggregate survey data.');
+  if (!Number.isSafeInteger(index) || index < 0 || !Object.hasOwn(state.galaxies, galaxyId)) throw new Error('Invalid procedural system address.');
+  if (Object.hasOwn(state.systems, id)) return state.systems[id];
+  if (!canDetailSystem(state)) throw new Error('The detailed simulation is full; distant sectors remain aggregate survey data.');
+  if (state.galaxies[galaxyId].surveyed >= state.galaxies[galaxyId].totalSystems) throw new Error('This galaxy is fully surveyed.');
   const seed = entitySeed(state.seed, id), rng = random(seed);
   const star = makeObject(state.seed, `${id}-star`, 'star', null);
   star.systemId = id; star.createdAt = state.time; star.stellar = initialStar(index % 4 === 3 ? 8 + rng() * 3 : 0.4 + rng() * 2);
