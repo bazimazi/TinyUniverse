@@ -27,6 +27,8 @@ Returns show net resource changes, population, new research, discoveries and com
 
 Suggested steps open the relevant world and panel. Evolution and research bars estimate the next milestone in universe time; upgrade cards estimate resource waiting time at 1× production. `npm run playtest` reports progression over 32 fixed seeds under a repeatable active-care policy. These checks complement human playtesting.
 
+On phones, panel navigation stays at the bottom of the screen. The observatory stops drawing off-screen while the universe keeps evolving. Reduced motion lowers drawing frequency, and a keyboard skip link opens game controls directly.
+
 Development builds include an inspector and simulation tools in Settings. Accessibility controls include reduced motion, large text, high contrast, optional music/discovery sounds and haptics. No network telemetry or monetization is included.
 
 See [phase commits and validation](docs/IMPLEMENTATION.md), [architecture and limits](docs/ARCHITECTURE.md), [design research](docs/RESEARCH.md), and the [original product plan](docs/PRODUCT_PLAN.md).

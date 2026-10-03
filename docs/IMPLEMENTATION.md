@@ -61,3 +61,13 @@ Suggested steps now open the relevant world and panel. First-moon guidance appea
 `npm run playtest` runs a repeatable four-hour active-care policy over 32 fixed seeds without debug resources, gifts or time acceleration. It also runs in `npm run check` / CI. Every sampled opening found a moon at 70 seconds and a civilization at 510 seconds. Spaceflight ranged from 1,710 to 4,230 seconds; a second system from 2,825 to 4,350 seconds; a galaxy from 5,150 to 9,240 seconds. Thirty of 32 runs reached the rebirth gate within four hours. This policy is a regression baseline, not human retention testing or a guarantee for every player strategy; no balance constants were changed without evidence.
 
 Validation: 58 headless tests, 16 desktop/portrait browser checks, two production offline checks, production build, 24-hour benchmark and 32-seed playthrough gates. New tests cover early pacing, affordability, shared evolution/research rates, support/laws, cold late worlds, collapse recovery and suggested-step navigation.
+
+Phase 13 commit: `de23348`.
+
+## Follow-up phase 14: mobile navigation and economical rendering
+
+Portrait panel navigation stays at the bottom of the viewport with safe-area spacing. Choosing a panel reveals its controls and keeps its navigation button in view. A keyboard skip link jumps directly to game controls. Selected worlds and their local neighbors now take precedence over remote favorites in the bounded world list; the selected object cannot disappear behind 40 favorites.
+
+The canvas reuses a rasterized star background. [Intersection Observer](https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API) pauses drawing outside the viewport, while production and UI updates continue. Reduced-motion scenes redraw about four times per second, with immediate updates for zoom, selection, view changes and resize. Returning to the scene draws current state. Stale canvas hits cannot select an object missing from a replacement universe.
+
+Validation: 60 headless tests, 20 desktop/portrait browser checks, two production offline checks, production build, 24-hour benchmark and 32-seed playthrough gates. Browser instrumentation confirms off-screen drawing stops without pausing production, resumes on return, and drops to 3–5 draws per second with reduced motion. Crowded favorites, late navigation, large text and viewport overflow are covered. Initial and late-game layouts were reviewed at desktop and 390px portrait sizes. This verifies browser behavior; battery usage and frame rate still require measurement on physical phones.

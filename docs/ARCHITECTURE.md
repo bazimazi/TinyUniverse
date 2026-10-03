@@ -16,6 +16,8 @@ Tiny Universe is a static mobile browser game with no production JavaScript depe
 
 Production integrates analytically between boundaries. Live play and offline catch-up use the same engine. Exploration, investigations and construction split time at their exact deadlines. Decision boundaries occur every 30 seconds; neighboring worlds update at 120-second intervals and distant worlds at 600-second intervals. Population and ecological changes use analytical curves, rather than simulating individual organisms or people. Changing the focus can change the approximation tier; identical seeds, actions, focus and elapsed simulation time remain deterministic.
 
+Evolution and research estimates share rate functions with the engine. They describe current conditions in universe time, rather than promising a fixed completion date. The 32-seed active-care playthrough checks opening milestones and interstellar access; its policy and results are recorded separately from human playtesting.
+
 Offline time uses a persisted wall-clock high-water mark. A clock rollback awards no duplicate time. The default cap is 24 hours; permanent laws increase it to seven days. Time controls accelerate live play. Large offline returns run in a worker while the UI waits. Automation spends resources through the same validated actions and runs offline after AI is unlocked.
 
 A session clock uses monotonic frame time for active play and detects gaps over five seconds with both frame and wall time. Those gaps use capped offline simulation at normal speed. The universe timestamp records credited time on every frame, independently of autosave frequency; stale animation-frame timestamps cannot repeat credit already awarded by an input event. Catch-up operates on an isolated state and reports net resource changes, new knowledge, population, completed expeditions/construction and recent events. Imports use the same worker path before replacing the live universe.
@@ -35,6 +37,8 @@ Player actions save immediately; the 15-second autosave also captures ongoing si
 `npm run build` creates `dist`, including a content-versioned service worker that pre-caches the complete local app and simulation worker. Install/first load needs a connection; subsequent launches work offline. Deployment can use any static host with HTTPS. Relative asset paths support subdirectories. Development tools are excluded from production controls.
 
 No external fonts, copyrighted game assets, telemetry, ads, commerce SDKs, cloud saves or multiplayer are required. Optional platform services can be introduced at the browser boundary without changing simulation rules.
+
+The scene caches its static star field at the canvas device-pixel ratio. Viewport intersection stops off-screen drawing without stopping simulation; reduced-motion rendering runs at about 4 Hz and reacts immediately to view/selection/zoom changes. Portrait navigation remains within thumb reach at the bottom of the viewport, with safe-area spacing. Accessible world chips prioritize the selected object and its system before remote favorites, while retaining a 40-item limit.
 
 ## Practical limits
 

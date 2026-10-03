@@ -13,6 +13,7 @@ test('first upgrade, selection, accessible settings and reload', async ({ page }
   await page.goto('/');
   await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
   await page.screenshot({ path: `artifacts/phase-1-${test.info().project.name}.png`, fullPage: true });
+  await page.screenshot({ path: `artifacts/current-start-${test.info().project.name}.png` });
   await page.getByRole('button', { name: '15 minerals · 8.0 matter', exact: true }).click();
   await expect(page.locator('#rate-energy')).toHaveText('+4.0 /s');
   expect(await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).objects['planet-0'].upgrades.solar, SAVE_KEY)).toBe(1);
@@ -136,4 +137,48 @@ test('the suggested step opens its world and shows evolution and upgrade estimat
   await expect(page.locator('.card').filter({ hasText: 'Ocean expansion' })).toContainText('at 1× production');
   await page.screenshot({ path: `artifacts/phase-13-${test.info().project.name}.png`, fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('canvas work pauses outside the viewport while production continues, then resumes', async ({ page }) => {
+  const timestamp = Date.now(); await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(() => {
+    const stats = window as unknown as { sceneDraws: number }; stats.sceneDraws = 0;
+    const original = CanvasRenderingContext2D.prototype.clearRect;
+    CanvasRenderingContext2D.prototype.clearRect = function (this: CanvasRenderingContext2D, x, y, w, h) { stats.sceneDraws++; original.call(this, x, y, w, h); };
+  });
+  const draws = () => page.evaluate(() => (window as unknown as { sceneDraws: number }).sceneDraws);
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
+  await page.clock.pauseAt(new Date(timestamp + 1000));
+  await page.clock.runFor(1000); expect(await draws()).toBeGreaterThan(20);
+  await page.locator('.observatory').evaluate(element => { (element as HTMLElement).style.transform = 'translateX(-300vw)'; });
+  await expect.poll(async () => { const before = await draws(); await page.clock.runFor(300); return await draws() - before; }).toBe(0);
+  const asleep = await draws(), energy = Number(await page.locator('#amount-energy').textContent());
+  await page.clock.runFor(1000);
+  expect(Number(await page.locator('#amount-energy').textContent())).toBeGreaterThan(energy); expect(await draws()).toBe(asleep);
+  await page.locator('.observatory').evaluate(element => { (element as HTMLElement).style.transform = ''; });
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  await expect.poll(async () => { await page.clock.runFor(100); return await draws(); }).toBeGreaterThan(asleep);
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click(); await page.getByLabel('Reduced motion', { exact: true }).check();
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+  await page.clock.runFor(300); const before = await draws(); await page.clock.runFor(1000);
+  const count = await draws() - before; expect(count).toBeGreaterThanOrEqual(3); expect(count).toBeLessThanOrEqual(5);
+});
+
+test('crowded favorites preserve the selected world and late navigation remains reachable', async ({ page }) => {
+  const state = createUniverse(41, Date.now()); for (let i = 0; i < 17; i++) generateSystem(state, i);
+  discoverGalaxy(state, 1); state.totalUpgrades = 12;
+  foundCivilization(state, 'planet-0').technologies = Object.keys(TECHNOLOGIES);
+  for (const object of Object.values(state.objects)) object.favorite = true;
+  const selected = Object.values(state.objects).filter(o => o.planet).at(-1)!; selected.favorite = false; state.selectedId = selected.id;
+  await page.addInitScript(({ key, save }) => localStorage.setItem(key, save), { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await expect(page.locator('#worlds [aria-pressed="true"]')).toContainText(selected.name);
+  expect(await page.locator('#worlds button').count()).toBeLessThanOrEqual(40);
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click(); await page.getByLabel('Large text', { exact: true }).check();
+  await page.getByRole('button', { name: 'Rebirth', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Another Big Bang' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Another Big Bang' })).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Rebirth', exact: true })).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: `artifacts/current-navigation-${test.info().project.name}.png` });
+  await page.screenshot({ path: `artifacts/phase-14-${test.info().project.name}.png`, fullPage: true });
 });

@@ -11,9 +11,16 @@ export class Scene {
   private scale = 1;
   private targetScale = 1;
   private canvas: HTMLCanvasElement;
+  private backdrop: HTMLCanvasElement;
+  private visible = true;
+  private dirty = true;
+  private lastDraw = -Infinity;
+  private lastSelection = '';
+  private lastView = '';
   view: 'planet' | 'system' | 'galaxy' | 'universe' = 'planet';
   constructor(canvas: HTMLCanvasElement, select: (id: string) => void) {
     this.canvas = canvas;
+    this.backdrop = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas is unavailable in this browser.');
     this.ctx = ctx;
@@ -28,27 +35,40 @@ export class Scene {
     canvas.addEventListener('wheel', event => {
       event.preventDefault();
       this.targetScale = Math.max(0.5, Math.min(2, this.targetScale * (event.deltaY < 0 ? 1.1 : 0.9)));
+      this.dirty = true;
     }, { passive: false });
     new ResizeObserver(() => this.resize()).observe(canvas);
+    if (typeof IntersectionObserver !== 'undefined') new IntersectionObserver(entries => {
+      this.visible = entries.at(-1)?.isIntersecting ?? true;
+      if (this.visible) this.dirty = true;
+    }).observe(canvas);
     this.resize();
   }
-  zoom(amount: number): void { this.targetScale = Math.max(0.5, Math.min(2, this.targetScale * amount)); }
+  zoom(amount: number): void { this.targetScale = Math.max(0.5, Math.min(2, this.targetScale * amount)); this.dirty = true; }
   private resize(): void {
     const rect = this.canvas.getBoundingClientRect();
     this.width = rect.width; this.height = rect.height;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     this.canvas.width = this.width * dpr; this.canvas.height = this.height * dpr;
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.backdrop.width = this.canvas.width; this.backdrop.height = this.canvas.height;
+    const background = this.backdrop.getContext('2d')!;
+    background.setTransform(dpr, 0, 0, dpr, 0, 0);
+    for (const star of this.stars) {
+      background.fillStyle = `rgba(205,223,255,${star.alpha})`;
+      background.beginPath(); background.arc(star.x * this.width, star.y * this.height, star.size, 0, Math.PI * 2); background.fill();
+    }
+    this.dirty = true;
   }
   draw(state: Universe): void {
     const c = this.ctx, w = this.width, h = this.height;
-    if (!w || !h) return;
+    if (!this.visible || !w || !h) return;
+    const now = performance.now(), changed = this.lastSelection !== state.selectedId || this.lastView !== this.view;
+    if (state.settings.reducedMotion && !this.dirty && !changed && now - this.lastDraw < 250) return;
+    this.lastDraw = now; this.dirty = false; this.lastSelection = state.selectedId; this.lastView = this.view;
     this.scale += (this.targetScale - this.scale) * (state.settings.reducedMotion ? 1 : 0.1);
     c.clearRect(0, 0, w, h);
-    for (const star of this.stars) {
-      c.fillStyle = `rgba(205,223,255,${star.alpha})`;
-      c.beginPath(); c.arc(star.x * w, star.y * h, star.size, 0, Math.PI * 2); c.fill();
-    }
+    c.drawImage(this.backdrop, 0, 0, w, h);
     this.hits.length = 0;
     const selected = selectedObject(state);
     if (this.view === 'galaxy' || this.view === 'universe') { this.cosmos(state); return; }

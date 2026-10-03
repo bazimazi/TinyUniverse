@@ -10,6 +10,7 @@ import { Scene } from './rendering/scene.ts';
 import { duration, escape, number } from './ui/format.ts';
 import { panelContent, PANEL_LABELS } from './ui/panels.ts';
 import { nextGoal } from './ui/goals.ts';
+import { worldsForSelection } from './ui/worlds.ts';
 import { mineAsteroid, startExploration } from './gameplay/exploration.ts';
 import { maximumSpeed, useAbility } from './gameplay/abilities.ts';
 import { buildStructure } from './gameplay/megastructures.ts';
@@ -42,6 +43,7 @@ if (loaded.state) {
 let resuming = false;
 const sessionClock = new SessionClock(Date.now(), performance.now());
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
+  <a class="skip-link" href="#panel">Skip to game controls</a>
   <header><a class="brand" href="${import.meta.env.BASE_URL}" aria-label="Tiny Universe home"><span class="brand-icon">✦</span> TINY UNIVERSE</a><button class="icon-button" data-action="tab" data-value="settings" aria-label="Settings">⚙</button></header>
   <div id="resources" class="resources" aria-label="Resource balances">${RESOURCE_IDS.map(id => `<div class="resource ${id}"><span>${id === 'biology' ? 'Biological potential' : id[0].toUpperCase() + id.slice(1)}</span><strong id="amount-${id}">0</strong><small id="rate-${id}">+0 /s</small></div>`).join('')}</div>
   <section id="offline-report" class="return-summary" aria-labelledby="return-title" hidden></section>
@@ -51,8 +53,9 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div id="goal" class="goal"></div><div id="worlds" class="worlds" aria-label="Select a celestial object"></div></section>
   <section class="dashboard"><nav aria-label="Game panels">${Object.entries(PANEL_LABELS).map(([id, label]) => `<button data-action="tab" data-value="${id}">${label}</button>`).join('')}</nav><div id="panel"></div></section></main>
   <footer>A little world. A living universe. <span id="save-status">Autosave enabled</span></footer><div id="toast" role="status" aria-live="polite"></div>`;
-const scene = new Scene(document.querySelector<HTMLCanvasElement>('#universe')!, id => { if (resuming || !settleLive()) return; state.selectedId = id; lastPanel = ''; render(); persist(); });
+const scene = new Scene(document.querySelector<HTMLCanvasElement>('#universe')!, id => { if (resuming || !settleLive() || !Object.hasOwn(state.objects, id)) return; state.selectedId = id; lastPanel = ''; render(); persist(); });
 const content = document.querySelector<HTMLDivElement>('#panel')!;
+content.tabIndex = -1;
 const returnSummary = document.querySelector<HTMLElement>('#offline-report')!;
 const ambient = new AmbientAudio();
 let lastSoundEvent = state.events.at(-1)?.id;
@@ -118,8 +121,8 @@ function render(): void {
   const goalElement = document.querySelector('#goal')!, goalHtml = `<span class="eyebrow">YOUR NEXT SMALL STEP</span><strong>${escape(goal.title)}</strong><p>${escape(goal.detail)}</p><button class="secondary" data-action="goal" data-value="${goal.panel}|${escape(goal.targetId)}">${escape(goal.label)}</button>`;
   if (goalElement.innerHTML !== goalHtml) goalElement.innerHTML = goalHtml;
   const worldList = document.querySelector('#worlds')!;
-  const visibleObjects = Object.values(state.objects).filter(object => object.systemId === state.objects[state.selectedId].systemId || object.favorite).slice(0, 40);
-  const worldKey = visibleObjects.map(object => `${object.id}:${object.name}:${object.id === state.selectedId}`).join('|');
+  const visibleObjects = worldsForSelection(state);
+  const worldKey = JSON.stringify(visibleObjects.map(object => [object.id, object.name, object.id === state.selectedId]));
   if (worldList.getAttribute('data-key') !== worldKey) {
     worldList.replaceChildren(...visibleObjects.map(object => {
       const button = document.createElement('button'); button.className = 'world-chip'; button.dataset.action = 'select'; button.dataset.value = object.id;
@@ -197,7 +200,10 @@ document.addEventListener('click', async event => {
   }
   if (['goal', 'select', 'favorite', 'rename', 'upgrade', 'explore', 'mine', 'build', 'mediate', 'investigate', 'law', 'ability', 'speed', 'debug', 'follow'].includes(action!)) persist();
   lastPanel = ''; render();
-  if (action === 'return-journal' || action === 'goal') document.querySelector('.dashboard')!.scrollIntoView({ behavior: state.settings.reducedMotion ? 'instant' : 'smooth' });
+  if (action === 'tab' || action === 'goal' || action === 'return-journal') {
+    document.querySelector('nav button[aria-current="page"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'instant' });
+    if (action !== 'tab' || window.matchMedia('(max-width: 800px)').matches) content.scrollIntoView({ behavior: state.settings.reducedMotion ? 'instant' : 'smooth', block: 'start' });
+  }
   if (state.settings.haptics) navigator.vibrate?.(10);
 });
 document.addEventListener('change', async event => {

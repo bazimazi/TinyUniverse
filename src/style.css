@@ -6,6 +6,7 @@ button { cursor: pointer; min-height: 44px; border-radius: 10px; border: 1px sol
 button:hover { background: #233d4b; border-color: #9ee9d955; }
 button:disabled { cursor: default; opacity: .42; }button[hidden] { display: none; }
 button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.skip-link { position: fixed; top: 12px; left: 12px; z-index: 30; padding: 12px 16px; background: #183d40; color: #deebfa; border: 1px solid var(--accent); border-radius: 10px; transform: translateY(-200%); }.skip-link:focus { transform: translateY(0); }#panel { scroll-margin-top: 20px; }
 header, footer, .resources, main { width: min(1240px, calc(100% - 64px)); margin: auto; }
 header { display: flex; align-items: center; justify-content: space-between; height: 92px; }
 .brand { font: 600 16px 'Space Grotesk', system-ui; letter-spacing: .17em; color: #e2f8f2; text-decoration: none; display: flex; align-items: center; gap: 12px; }
@@ -63,3 +64,8 @@ footer { display: flex; justify-content: space-between; font-size: 10px; color: 
 .high-contrast { --muted: #c9d8e9; --line: #dbefff66; }.large-text { font-size: 120%; }.large-text p, .large-text button { font-size: 16px; }.reduced-motion * { transition: none !important; }
 @media (max-width: 800px) { header, footer, .resources, main { width: calc(100% - 28px); }header { height: 72px; }.brand { font-size: 13px; }main { grid-template-columns: 1fr; gap: 20px; }.observatory { position: relative; top: 0; }canvas { height: 300px; }.scene-head { padding: 18px; }.goal { padding: 18px; }.resources { gap: 6px; margin-bottom: 14px; }.resource { padding: 12px 8px; display: flex; flex-direction: column; }.resource strong { font-size: 20px; }.resource span { font-size: 10px; min-height: 24px; }.resource small { align-self: start; font-size: 10px; }.dashboard { padding: 0 4px; }nav { position: sticky; top: 0; z-index: 2; background: #09111ef2; padding-top: 10px; }.worlds { padding: 14px 18px; }footer { gap: 16px; line-height: 1.6; } }
 @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+@media (max-width: 800px) {
+  body { padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+  nav { position: fixed; inset: auto 0 0; width: 100%; margin: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); border-bottom: 0; background: #0b1828fa; box-shadow: 0 -12px 30px #03091355; z-index: 20; }
+  nav button { flex-shrink: 0; }#toast { bottom: calc(86px + env(safe-area-inset-bottom, 0px)); }
+}
