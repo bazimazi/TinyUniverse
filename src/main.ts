@@ -30,6 +30,8 @@ let loaded: ReturnType<typeof load>;
 try { loaded = load(localStorage); } catch { loaded = { state: null, warning: 'Browser storage is unavailable. Export your save to keep your progress.', corrupt: true }; }
 let state = loaded.state ?? createUniverse();
 let savingBlocked = loaded.corrupt;
+let catchUpError: string | null = null;
+function returnFailure(error: unknown): string { return error instanceof Error && error.message ? error.message : 'Unable to complete this return.'; }
 let panel: Panel = 'develop';
 let lastPanel = '';
 let lastPanelRender = 0;
@@ -39,7 +41,7 @@ document.querySelector('#app')!.innerHTML = '<div class="loading" role="status">
 let offline: OfflineReport | null = null;
 if (loaded.state) {
   try { const caught = await catchUp(state, Date.now()); state = caught.state; offline = caught.result; }
-  catch (error) { savingBlocked = true; loaded.warning = (error as Error).message; }
+  catch (error) { catchUpError = returnFailure(error); loaded.warning = catchUpError; }
 } else state.settings.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let resuming = false;
 const sessionClock = new SessionClock(Date.now(), performance.now());
@@ -47,6 +49,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <a class="skip-link" href="#panel">Skip to game controls</a>
   <header><a class="brand" href="${import.meta.env.BASE_URL}" aria-label="Tiny Universe home"><span class="brand-icon">✦</span> TINY UNIVERSE</a><button class="icon-button" data-action="tab" data-value="settings" aria-label="Settings">⚙</button></header>
   <div id="resources" class="resources" aria-label="Resource balances">${RESOURCE_IDS.map(id => `<div class="resource ${id}"><span>${id === 'biology' ? 'Biological potential' : id[0].toUpperCase() + id.slice(1)}</span><strong id="amount-${id}">0</strong><small id="rate-${id}">+0 /s</small></div>`).join('')}</div>
+  <section id="return-recovery" class="return-summary" role="alert" aria-labelledby="recovery-title" hidden></section>
   <section id="offline-report" class="return-summary" aria-labelledby="return-title" hidden></section>
   <main><section class="observatory" aria-label="Celestial observatory"><div class="scene-head"><span class="eyebrow">THE UNIVERSE IS WAKING UP</span><span id="age" class="muted"></span></div>
   <canvas id="universe" aria-label="Interactive celestial scene. Use the world list to select objects with a keyboard." role="img"></canvas>
@@ -54,10 +57,11 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div id="goal" class="goal"></div><div id="worlds" class="worlds" aria-label="Select a celestial object"></div></section>
   <section class="dashboard"><nav aria-label="Game panels">${Object.entries(PANEL_LABELS).map(([id, label]) => `<button data-action="tab" data-value="${id}">${label}</button>`).join('')}</nav><div id="panel"></div></section></main>
   <footer>A little world. A living universe. <span id="save-status">Autosave enabled</span></footer><div id="toast" role="status" aria-live="polite"></div>`;
-const scene = new Scene(document.querySelector<HTMLCanvasElement>('#universe')!, id => { if (resuming || !settleLive() || !Object.hasOwn(state.objects, id)) return; state.selectedId = id; lastPanel = ''; render(); persist(); });
+const scene = new Scene(document.querySelector<HTMLCanvasElement>('#universe')!, id => { if (resuming || catchUpError || !settleLive() || !Object.hasOwn(state.objects, id)) return; state.selectedId = id; lastPanel = ''; render(); persist(); });
 const content = document.querySelector<HTMLDivElement>('#panel')!;
 content.tabIndex = -1;
 const returnSummary = document.querySelector<HTMLElement>('#offline-report')!;
+const recoveryPanel = document.querySelector<HTMLElement>('#return-recovery')!;
 const ambient = new AmbientAudio();
 let lastSoundEvent = state.events.at(-1)?.id;
 let toastTimer: ReturnType<typeof setTimeout>;
@@ -69,6 +73,7 @@ function toast(message: string): void {
 }
 function persist(notify = false): void {
   if (resuming) return;
+  if (catchUpError) { document.querySelector('#save-status')!.textContent = 'Return paused · save protected'; if (notify) toast('Retry your return, export a copy or import a backup in Settings.'); return; }
   if (savingBlocked) { if (notify) toast('Save is protected. Import a backup or choose Start fresh in settings.'); return; }
   try {
     save(localStorage, state);
@@ -88,14 +93,16 @@ async function restoreRuntime(): Promise<void> {
   try {
     const caught = await catchUp(state, Date.now());
     state = caught.state;
+    catchUpError = null;
     sessionClock.reset(state.lastTimestamp, performance.now());
     showReturn(caught.result);
     if (!document.hidden) ambient.configure(state.settings, scene.view);
-  } catch (error) { savingBlocked = true; toast((error as Error).message); }
+  } catch (error) { catchUpError = returnFailure(error); toast(catchUpError); }
   finally { resuming = false; persist(); lastPanel = ''; render(); }
 }
 function settleLive(now = performance.now()): boolean {
   if (resuming) return false;
+  if (catchUpError) return true;
   const timestamp = Date.now(), step = sessionClock.sample(timestamp, now);
   if (step.needsCatchUp) { void restoreRuntime(); return false; }
   advance(state, step.seconds * Math.min(state.speed, maximumSpeed(state)));
@@ -104,6 +111,11 @@ function settleLive(now = performance.now()): boolean {
   return true;
 }
 function render(): void {
+  recoveryPanel.hidden = !catchUpError;
+  if (catchUpError) {
+    const html = `<h2 id="recovery-title">Your return needs another try</h2><p>${escape(catchUpError)}</p><p>Progress is paused and your saved universe is protected. Retry, export a copy, or import a backup in Settings.</p><div class="scene-controls"><button data-action="retry-return">Retry return</button><button class="secondary" data-action="export">Export saved universe</button><button class="secondary" data-action="tab" data-value="settings">Open Settings</button></div>`;
+    if (recoveryPanel.innerHTML !== html) recoveryPanel.innerHTML = html;
+  }
   const production = rates(state);
   document.querySelector<HTMLElement>('.resource.knowledge')!.hidden = Object.keys(state.civilizations).length === 0;
   for (const id of ['exotic', 'stellar', 'quantum'] as const) document.querySelector<HTMLElement>(`.resource.${id}`)!.hidden = state.resources[id] === 0 && production[id] === 0;
@@ -165,6 +177,8 @@ document.addEventListener('click', async event => {
   if (!button) return;
   const { action, value = '' } = button.dataset;
   if (resuming || !settleLive()) return;
+  if (catchUpError && !['tab', 'view', 'zoom', 'export', 'reset', 'retry-return', 'dismiss-return', 'return-journal', 'save'].includes(action!)) { toast('Retry your return or restore a backup before continuing.'); return; }
+  if (action === 'retry-return') { await restoreRuntime(); return; }
   if (action === 'tab') panel = value as Panel;
   if (action === 'goal') {
     const [destination, targetId] = value.split('|');
@@ -200,7 +214,7 @@ document.addEventListener('click', async event => {
   }
   if (action === 'reset' && window.confirm('Start a new universe? Current progress will be replaced. Export a save first to keep it.')) {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) localStorage.setItem(`${SAVE_KEY}.archive`, raw); } catch { /* Exports remain available. */ }
-    state = createUniverse(); sessionClock.reset(state.lastTimestamp, performance.now()); returnSummary.hidden = true; scene.view = 'planet'; savingBlocked = false; persist(true);
+    state = createUniverse(); sessionClock.reset(state.lastTimestamp, performance.now()); returnSummary.hidden = true; scene.view = 'planet'; savingBlocked = false; catchUpError = null; persist(true);
   }
   if (['goal', 'select', 'favorite', 'rename', 'upgrade', 'explore', 'mine', 'build', 'mediate', 'investigate', 'law', 'ability', 'speed', 'debug', 'follow'].includes(action!)) persist();
   lastPanel = ''; render();
@@ -213,6 +227,10 @@ document.addEventListener('click', async event => {
 document.addEventListener('change', async event => {
   if (resuming || !settleLive()) return;
   const input = event.target as HTMLInputElement;
+  if (catchUpError && input.id !== 'import-file' && !input.dataset.setting) {
+    if (input.dataset.automation) input.checked = state.automation[input.dataset.automation as keyof typeof state.automation];
+    return;
+  }
   if (input.id === 'rebirth-seed') return;
   if (input.dataset.setting) { state.settings[input.dataset.setting as keyof Settings] = input.checked; ambient.configure(state.settings, scene.view); persist(); }
   if (input.dataset.automation && hasTechnology(state, 'ai')) { state.automation[input.dataset.automation as keyof typeof state.automation] = input.checked; persist(); }
@@ -229,7 +247,7 @@ document.addEventListener('change', async event => {
       if (!window.confirm('Replace your current universe with this save?')) return;
       const caught = await catchUp(imported, Date.now());
       state = caught.state; sessionClock.reset(state.lastTimestamp, performance.now()); returnSummary.hidden = true; showReturn(caught.result);
-      scene.view = 'planet'; savingBlocked = false; resuming = false; persist(); toast('Your universe has been restored.');
+      scene.view = 'planet'; savingBlocked = false; catchUpError = null; resuming = false; persist(); toast('Your universe has been restored.');
     } catch (error) { toast(error instanceof Error ? error.message : 'Unable to read save.'); }
     finally { resuming = false; }
   }

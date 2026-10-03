@@ -22,6 +22,8 @@ Offline time uses a persisted wall-clock high-water mark. A clock rollback award
 
 A session clock uses monotonic frame time for active play and detects gaps over five seconds with both frame and wall time. Those gaps use capped offline simulation at normal speed. The universe timestamp records credited time on every frame, independently of autosave frequency; stale animation-frame timestamps cannot repeat credit already awarded by an input event. Catch-up operates on an isolated state and reports net resource changes, new knowledge, population, completed expeditions/construction and recent events. Imports use the same worker path before replacing the live universe.
 
+Catch-up validates input and output state and checks worker credit against the exact requested gap, cap and timestamp. Worker transport failures or a 15-second timeout terminate the worker and run the same bounded engine on the untouched clone; late replies are ignored. Simulation/validation failures reject atomically. A failed saved return pauses simulation and saving while allowing export, inspection, backup import or retry, preserving the original timestamp until recovery. A failed import leaves the current universe playable. The inline fallback uses the main thread.
+
 ## Scale and persistence
 
 Each seed describes many potential systems. At most 48 systems and 256 celestial objects become detailed state. Further surveys return aggregate data. Up to 64 galaxies store distant colony counts and populations, rather than thousands of individual entities. History, diplomacy and construction are bounded. Destroyed civilizations keep their histories and stop population/research updates.

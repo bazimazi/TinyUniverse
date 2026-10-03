@@ -81,3 +81,15 @@ Exploration automation falls back when technology or a charting limit makes its 
 Research assistance keeps at least 200 knowledge in reserve across multiple civilizations, skips already funded projects and respects cooldowns. Civilization assistance skips terraforming that would have no meaningful effect. Each automation shows its next action or reason for waiting, including while a checkbox has focus. AI makes these controls accessible even before spaceflight; toggles persist and run every minute of universe time, including offline.
 
 Validation: 68 headless tests, 22 desktop/portrait browser checks, two production offline checks, production build, 24-hour benchmark and 32-seed playthrough gates. New regressions cover charting capacity, unlock/resource fallbacks, selected-system development, capped upgrades, reserves, cooldowns, extinct civilizations, escaped world names, saved toggles and matching live/offline decisions. Resource totals agree within floating-point tolerance. Automation controls were visually reviewed at desktop and 390px portrait sizes.
+
+Phase 15 commit: `61b77a2`.
+
+## Follow-up phase 16: recoverable offline failures
+
+Offline catch-up validates its source and completed state on both worker and inline paths. Invalid timestamps are rejected before time or resources change. Worker replies must match the requested interval, offline cap and wall-clock high-water mark. Simulation errors and incomplete or invalid replies reject cleanly without replacing the live universe. Every worker completion releases handlers and the timeout.
+
+Worker construction, loading, message-transfer and decoding failures fall back to the same bounded simulation on an untouched clone. A worker that has not replied after 15 seconds is terminated and falls back; late messages cannot apply a second result. The fallback runs on the main thread, so very large returns can briefly delay interaction when workers are unavailable.
+
+When a saved return actually fails simulation, a persistent recovery card pauses progression and protects the save. Export, Settings and retry remain available; a successful retry credits the original gap exactly once and resumes saving. Failed imports preserve the playable current universe. Existing save schemas remain compatible.
+
+Validation: 74 headless tests, 28 desktop/portrait browser checks, four production offline checks, production build, 24-hour benchmark and 32-seed playthrough gates. Tests cover worker failures and timeouts, late replies, validation failures, capped/rolled-back clocks, blocked asset requests, paused save protection, escaping, exports, successful retry and failed-import isolation. Production checks restore a large save without a network when workers are unavailable. Recovery cards were visually reviewed at desktop and 390px portrait sizes. The 24-hour benchmark completed in approximately one second on this machine; physical-phone performance remains unverified.

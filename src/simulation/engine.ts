@@ -37,6 +37,7 @@ export function advance(state: Universe, seconds: number): void {
   }
 }
 export function resumeOffline(state: Universe, timestamp: number): { seconds: number; capped: boolean } {
+  if (!Number.isFinite(timestamp) || timestamp < 0) throw new Error('Offline timestamp must be finite and nonnegative.');
   const elapsed = Math.max(0, (timestamp - state.lastTimestamp) / 1000);
   const seconds = Math.min(elapsed, offlineCap(state));
   advance(state, seconds);
