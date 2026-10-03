@@ -10,6 +10,9 @@ import { collapse, foundCivilization } from '../src/simulation/civilizations.ts'
 import { advance } from '../src/simulation/engine.ts';
 import { catchUp } from '../src/simulation/offline-client.ts';
 import { prestigePanel } from '../src/ui/prestige.ts';
+import { mineAsteroid } from '../src/gameplay/exploration.ts';
+import { rates } from '../src/simulation/economy.ts';
+import { offlineReportContent } from '../src/ui/offline.ts';
 
 function automatedUniverse() {
   const state = createUniverse(41, 0);
@@ -95,10 +98,72 @@ test('automation status is read-only and escapes player world names', () => {
 
 test('enabled automation behaves identically during stepped live play and offline returns', async () => {
   const source = automatedUniverse(); Object.values(source.civilizations)[0].technologies.push('spaceflight');
-  source.automation = { explore: true, develop: true, assist: true, research: true };
+  source.automation = { explore: true, develop: true, assist: true, research: true, mine: true };
   const live = structuredClone(source); for (let i = 0; i < 1200; i++) advance(live, 1); live.lastTimestamp = 1200000;
   const offline = await catchUp(source, 1200000);
   for (const id of Object.keys(live.resources) as (keyof typeof live.resources)[]) assert.ok(Math.abs(offline.state.resources[id] - live.resources[id]) <= Math.max(1, live.resources[id]) * 1e-12);
   assert.deepEqual({ ...offline.state, resources: {} }, { ...live, resources: {} });
   assert.ok(live.exploration.completed.orbital > 0); assert.ok(live.totalUpgrades > 2); assertUniverse(live);
+});
+
+function addAsteroid(state: ReturnType<typeof createUniverse>, id: string, deposit: number, systemId = 'system-0') {
+  const parentId = state.systems[systemId].starId, object = makeObject(state.seed, id, 'asteroid', parentId);
+  object.systemId = systemId; object.deposit = deposit; state.objects[id] = object; state.objects[parentId].children.push(id);
+  return object;
+}
+
+test('mining prioritizes the selected asteroid, local deposits and then distant deposits', () => {
+  const state = automatedUniverse(); state.automation.mine = true; generateSystem(state, 0);
+  const small = addAsteroid(state, 'local-small', 100), rich = addAsteroid(state, 'local-rich', 200), remote = addAsteroid(state, 'remote-rich', 300, 'galaxy-0-system-0');
+  advance(state, 59); assert.equal(rich.mined, false); advance(state, 1); assert.equal(rich.mined, true); assert.equal(small.mined, false); assert.equal(remote.mined, false);
+  state.selectedId = remote.id; advance(state, 60); assert.equal(remote.mined, true); assert.equal(small.mined, false);
+  advance(state, 60); assert.equal(small.mined, true); assert.equal(state.events.filter(e => e.type === 'AsteroidMined').length, 3); assertUniverse(state);
+});
+
+test('mining requires AI, its saved toggle and affordable resources', () => {
+  const state = createUniverse(41, 0), asteroid = addAsteroid(state, 'test-asteroid', 100); state.automation.mine = true;
+  let original = structuredClone(state); automate(state); assert.deepEqual(state, original);
+  foundCivilization(state, 'planet-0').technologies = ['ai']; state.resources.energy = 1000; state.resources.matter = 1000; state.automation.mine = false;
+  original = structuredClone(state); automate(state); assert.deepEqual(state, original);
+  state.automation.mine = true; state.resources.matter = 24; original = structuredClone(state);
+  automate(state); assert.deepEqual(state, original); assert.match(automationStatus(state, 'mine'), /Waiting for 60 energy and 25 matter/);
+  state.resources.matter = 25; automate(state); assert.equal(asteroid.mined, true); assert.equal(state.resources.matter, 0);
+  assert.match(automationStatus(state, 'mine'), /Waiting for an unmined asteroid/);
+});
+
+test('mining awards a bounded deposit once and adds continuous production', () => {
+  const state = automatedUniverse(), asteroid = addAsteroid(state, 'test-asteroid', BALANCE.resourceLimit), baseline = rates(state).minerals;
+  state.resources.minerals = BALANCE.resourceLimit;
+  assert.equal(mineAsteroid(state, asteroid.id).ok, true); assert.equal(state.resources.minerals, BALANCE.resourceLimit);
+  assert.equal(rates(state).minerals, baseline + BALANCE.asteroidYield);
+  const original = structuredClone(state); assert.equal(mineAsteroid(state, asteroid.id).ok, false); assert.deepEqual(state, original); assertUniverse(state);
+});
+
+test('waiting expedition budgets protect mining, development, aid and research spending', () => {
+  const state = automatedUniverse(); generateSystem(state, 0); generateSystem(state, 1); state.exploration.completed.orbital = 3;
+  const civ = Object.values(state.civilizations)[0]; civ.technologies.push('spaceflight', 'interstellar'); civ.researching = 'reality'; civ.researchPoints = 0; civ.stability = 0.2;
+  state.objects['planet-0'].planet!.habitability = 0.4;
+  state.automation = { explore: true, mine: true, develop: true, assist: true, research: true };
+  state.resources.energy = 1000; state.resources.knowledge = 450; state.resources.minerals = state.resources.biology = 0; state.resources.matter = 100;
+  const asteroid = addAsteroid(state, 'waiting-asteroid', 200), upgrades = structuredClone(state.objects['planet-0'].upgrades);
+  automate(state); assert.equal(state.exploration.job, null); assert.equal(asteroid.mined, false); assert.equal(state.resources.energy, 1000);
+  assert.deepEqual(state.objects['planet-0'].upgrades, upgrades); assert.equal(civ.stability, 0.2); assert.equal(state.resources.knowledge, 415);
+  assert.match(automationStatus(state, 'mine'), /Saving expedition resources/); assert.match(automationStatus(state, 'develop'), /Saving expedition resources/);
+  assert.match(automationStatus(state, 'research'), /435 knowledge \(400 kept in reserve\)/);
+  state.resources.energy = 8000; automate(state); assert.equal(state.exploration.job!.kind, 'galactic'); assert.equal(state.resources.energy, 0); assert.equal(state.resources.knowledge, 15);
+});
+
+test('waiting for expedition knowledge still permits upgrades using unrelated resources', () => {
+  const state = automatedUniverse(); generateSystem(state, 0); generateSystem(state, 1); state.exploration.completed.orbital = 3;
+  Object.values(state.civilizations)[0].technologies.push('spaceflight', 'interstellar');
+  state.automation.explore = state.automation.develop = true; state.resources.energy = 1000; state.resources.knowledge = 0;
+  automate(state); assert.equal(state.exploration.job, null); assert.equal(state.objects['planet-0'].upgrades.solar, 1); assert.equal(state.resources.energy, 1000);
+});
+
+test('offline summaries count mining outposts and include their costs, deposits and production', async () => {
+  const state = automatedUniverse(); state.automation.mine = true; addAsteroid(state, 'asteroid-a', 100); addAsteroid(state, 'asteroid-b', 200);
+  const live = structuredClone(state); advance(live, 180); live.lastTimestamp = 180000;
+  const caught = await catchUp(state, 180000); assert.deepEqual(caught.state, live); assert.equal(caught.result.miningOutpostsBuilt, 2);
+  assert.equal(caught.result.resources.minerals, 930); assert.equal(caught.result.resources.energy, 240);
+  assert.ok(Math.abs(caught.result.resources.matter - 76) < 1e-8); assert.match(offlineReportContent(caught.result), /2 mining outposts built/); assertUniverse(caught.state);
 });

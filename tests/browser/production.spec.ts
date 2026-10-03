@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { createUniverse } from '../../src/core/universe.ts';
+import { createUniverse, makeObject } from '../../src/core/universe.ts';
+import { foundCivilization } from '../../src/simulation/civilizations.ts';
 import { generateSystem } from '../../src/gameplay/systems.ts';
 import { serialize, SAVE_KEY } from '../../src/persistence/save.ts';
 test('production app caches its assets and launches without a network', async ({ page, context }) => {
@@ -10,9 +11,13 @@ test('production app caches its assets and launches without a network', async ({
   await page.getByRole('button', { name: 'Settings', exact: true }).first().click(); await expect(page.getByText('Developer tools', { exact: true })).toHaveCount(0);
   await page.getByLabel('Discovery sounds', { exact: true }).check(); await page.getByLabel('Ambient music', { exact: true }).check(); await page.getByLabel('Ambient music', { exact: true }).uncheck();
   const imported = createUniverse(77, Date.now() - 3600000); for (let i = 0; i < 9; i++) generateSystem(imported, i);
+  foundCivilization(imported, 'planet-0').technologies = ['ai']; imported.automation.mine = true; imported.resources.energy = imported.resources.matter = 1000;
+  const asteroid = makeObject(imported.seed, 'offline-asteroid', 'asteroid', 'star-0'); imported.objects[asteroid.id] = asteroid; imported.objects['star-0'].children.push(asteroid.id);
   let workers = 0; page.on('worker', () => workers++); page.once('dialog', dialog => dialog.accept());
   await page.locator('#import-file').setInputFiles({ name: 'universe.json', mimeType: 'application/json', buffer: Buffer.from(serialize(imported)) });
   await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible();
+  await expect(page.locator('#offline-report')).toContainText('1 mining outpost built');
+  expect(await page.evaluate(({ key, id }) => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).objects[id].mined, { key: SAVE_KEY, id: asteroid.id })).toBe(true);
   await expect(page.locator('#age')).toContainText('1.0h'); expect(workers).toBe(1);
   expect(errors).toEqual([]);
 });

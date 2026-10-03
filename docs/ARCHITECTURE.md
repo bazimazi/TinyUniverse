@@ -7,7 +7,7 @@ Tiny Universe is a static mobile browser game with no production JavaScript depe
 | `core` | Serializable models, seeded RNG, generation defaults, configuration, tiers and invariants |
 | `simulation` | Economy, orbital calculations, ecology, civilization, stars, diplomacy, construction and aggregate populations |
 | `gameplay` | Validated player actions, exploration jobs, abilities, investigations, automation and rebirth |
-| `persistence` | Checksummed save envelopes, migrations 1–10, primary/backup saves and storage failures |
+| `persistence` | Checksummed save envelopes, migrations 1–11, primary/backup saves and storage failures |
 | `rendering` | Camera scales, bounded canvas draws, hit testing and reduced motion |
 | `ui` | Contextual panels, formatting, accessible controls and progressively unlocked navigation |
 | `audio` | Optional locally synthesized ambience and discovery tones |
@@ -21,6 +21,8 @@ Evolution and research estimates share rate functions with the engine. They desc
 Influence panels, actions and automation share read-only readiness checks before spending. Orbital push and pull share recovery and scale period and climate by the actual change in radius, bounded to normalized radii 60–800 and periods of at least one second. Existing gravity and cooldown saves retain their meaning. Captures remain local to their system and preserve reciprocal orbit links.
 
 Offline time uses a persisted wall-clock high-water mark. A clock rollback awards no duplicate time. The default cap is 24 hours; permanent laws increase it to seven days. Time controls accelerate live play. Large offline returns run in a worker while the UI waits. Automation spends resources through the same validated actions and runs offline after AI is unlocked. Its read-only plans also provide UI status: unavailable expedition destinations fall back, reachable trips reserve their costs, development picks affordable unfinished upgrades in the selected system, and research inspiration retains a 200-knowledge reserve. Automation decisions occur every 60 seconds of universe time.
+
+While exploration waits to launch, development, aid, research and mining retain its resource budget, spending surplus or unrelated resources. Research also retains at least 200 knowledge. Mining establishes one outpost per minute, prioritizing selection, local systems, deposit size and finally stable object IDs. It shares costs/rewards with manual mining. Outposts and their continuous income are included in return summaries. Schema 11 adds the optional mining toggle, disabled when migrating versions 1–10; rebirth restores all automation defaults.
 
 A session clock uses monotonic frame time for active play and detects gaps over five seconds with both frame and wall time. Those gaps use capped offline simulation at normal speed. The universe timestamp records credited time on every frame, independently of autosave frequency; stale animation-frame timestamps cannot repeat credit already awarded by an input event. Catch-up operates on an isolated state and reports net resource changes, new knowledge, population, completed expeditions/construction and recent events. Imports use the same worker path before replacing the live universe.
 

@@ -12,6 +12,7 @@ export interface ProgressSnapshot {
   technologies: Set<string>;
   structures: Set<string>;
   discoveries: number;
+  outposts: number;
   expeditions: number;
   eventIds: Set<string>;
 }
@@ -29,6 +30,7 @@ export interface OfflineReport {
   structuresCompleted: number;
   discoveries: number;
   expeditionsCompleted: number;
+  miningOutpostsBuilt: number;
   highlights: GameEvent[];
 }
 
@@ -45,6 +47,7 @@ export function captureProgress(state: Universe): ProgressSnapshot {
     technologies: new Set(civilizations.flatMap(civ => civ.technologies)),
     structures: new Set(Object.values(state.megastructures).filter(s => s.status === 'complete').map(s => s.id)),
     discoveries: Object.keys(state.discoveries).length,
+    outposts: Object.values(state.objects).filter(o => o.type === 'asteroid' && o.mined).length,
     expeditions: Object.values(state.exploration.completed).reduce((sum, count) => sum + count, 0),
     eventIds: new Set(state.events.map(event => event.id))
   };
@@ -67,6 +70,7 @@ export function summarizeProgress(before: ProgressSnapshot, state: Universe, tim
     structuresCompleted: [...after.structures].filter(id => !before.structures.has(id)).length,
     discoveries: after.discoveries - before.discoveries,
     expeditionsCompleted: after.expeditions - before.expeditions,
+    miningOutpostsBuilt: after.outposts - before.outposts,
     highlights: state.events.filter(event => !before.eventIds.has(event.id)).sort((a, b) => priority(b) - priority(a) || b.time - a.time).slice(0, 3)
   };
 }

@@ -60,7 +60,7 @@ export interface Universe {
   galaxies: Record<string, Galaxy>;
   relations: Record<string, Relation>; megastructures: Record<string, Megastructure>;
   discoveries: Record<string, Discovery>; anomalies: Record<string, Anomaly>; achievements: string[]; artifacts: string[]; records: Records;
-  meta: MetaProgression; automation: { explore: boolean; develop: boolean; assist: boolean; research: boolean };
+  meta: MetaProgression; automation: { explore: boolean; develop: boolean; assist: boolean; research: boolean; mine: boolean };
 }
 export interface ActionResult { ok: boolean; message: string }
 export interface StorageAdapter { getItem(key: string): string | null; setItem(key: string, value: string): void; removeItem?(key: string): void }

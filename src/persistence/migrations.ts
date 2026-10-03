@@ -34,5 +34,6 @@ export function migrate(state: Universe): void {
     state.discoveries = {}; state.anomalies = {}; state.achievements = []; state.artifacts = [];
     state.records = { peakPopulation: 0, mostAdvanced: 0, mostWorlds: 1, mostSpecies: 0, longestCivilization: 0 };
   }
-  if (state.version < 10) { state.meta = initialMeta(); state.automation = { explore: false, develop: false, assist: false, research: false }; state.settings.music = false; state.settings.haptics = false; }
+  if (state.version < 10) { state.meta = initialMeta(); state.automation = { explore: false, develop: false, assist: false, research: false, mine: false }; state.settings.music = false; state.settings.haptics = false; }
+  if (state.version < 11) state.automation.mine = false;
 }

@@ -8,6 +8,7 @@ export function offlineReportContent(report: OfflineReport): string {
   const changes: string[] = [];
   if (Math.abs(report.populationChange) >= 1) changes.push(`${signed(report.populationChange)} population across your universe`);
   if (report.expeditionsCompleted) changes.push(`${report.expeditionsCompleted} expedition${report.expeditionsCompleted === 1 ? '' : 's'} completed`);
+  if (report.miningOutpostsBuilt) changes.push(`${report.miningOutpostsBuilt} mining outpost${report.miningOutpostsBuilt === 1 ? '' : 's'} built`);
   if (report.newWorlds) changes.push(`${report.newWorlds} celestial object${report.newWorlds === 1 ? '' : 's'} discovered`);
   if (report.newSystems) changes.push(`${report.newSystems} star system${report.newSystems === 1 ? '' : 's'} charted`);
   if (report.newGalaxies) changes.push(`${report.newGalaxies} galax${report.newGalaxies === 1 ? 'y' : 'ies'} charted`);

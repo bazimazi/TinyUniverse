@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
-import { createUniverse } from '../../src/core/universe.ts';
+import { createUniverse, makeObject } from '../../src/core/universe.ts';
+import { hash } from '../../src/core/random.ts';
 import { advance } from '../../src/simulation/engine.ts';
 import { serialize, SAVE_KEY } from '../../src/persistence/save.ts';
 import { generateSystem } from '../../src/gameplay/systems.ts';
@@ -292,5 +293,31 @@ test('orbital pull previews climate, saves movement and shares recovery with pus
   await page.locator('[data-ability="pull"]').screenshot({ path: `artifacts/phase-17-${test.info().project.name}.png` });
   await page.reload(); await page.getByRole('button', { name: 'Influence', exact: true }).click();
   await expect(page.locator('[data-ability="pull"] button')).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('old saves opt into automatic mining, report new outposts and retain the choice after reload', async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(41, timestamp); state.totalUpgrades = 2;
+  foundCivilization(state, 'planet-0').technologies = ['ai']; state.resources.energy = state.resources.matter = 1000;
+  const asteroid = makeObject(state.seed, 'test-asteroid', 'asteroid', 'star-0'); asteroid.name = 'Little seam'; asteroid.deposit = 200;
+  state.objects[asteroid.id] = asteroid; state.objects['star-0'].children.push(asteroid.id);
+  const legacy = JSON.parse(JSON.stringify(state)); legacy.version = 10; delete legacy.automation.mine;
+  const payload = JSON.stringify(legacy), save = JSON.stringify({ format: 'TinyUniverse', checksum: hash(payload), payload });
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, save); }, { key: SAVE_KEY, save });
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
+  await page.clock.pauseAt(new Date(timestamp + 1000)); await page.getByRole('button', { name: 'Rebirth', exact: true }).click();
+  const toggle = page.getByLabel('Automatic asteroid mining', { exact: true }); await expect(toggle).not.toBeChecked(); await toggle.check();
+  await expect(page.locator('[data-automation-status="mine"]')).toContainText('Next: mining outpost on Little seam.');
+  await page.clock.fastForward(60000); await expect(page.locator('#offline-report')).toContainText('1 mining outpost built');
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.version).toBe(11); expect(saved.automation.mine).toBe(true); expect(saved.objects[asteroid.id].mined).toBe(true);
+  await page.locator('#offline-report').screenshot({ path: `artifacts/phase-18-return-${test.info().project.name}.png` });
+  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  const card = page.locator('.card').filter({ hasText: 'Little seam' }); await expect(card).toContainText('Mining outpost active.');
+  await expect(card.locator('[data-action="mine"]')).toHaveCount(0);
+  await card.screenshot({ path: `artifacts/phase-18-mining-${test.info().project.name}.png` });
+  await page.reload(); await page.getByRole('button', { name: 'Rebirth', exact: true }).click(); await expect(toggle).toBeChecked();
+  await expect(page.locator('[data-automation-status="mine"]')).toHaveText('Waiting for an unmined asteroid.');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

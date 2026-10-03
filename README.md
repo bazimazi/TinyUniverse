@@ -25,7 +25,7 @@ For a production build, run `npm run build`, then `npm run preview`. Deploy `dis
 
 Returns show net resource changes, population, new research, discoveries and completed expeditions/construction. Browser stalls use offline catch-up at normal speed; time controls accelerate active play. Player actions save immediately. Technology recorded by fallen civilizations keeps player unlocks available until rebirth.
 
-AI unlocks optional automation in Rebirth. It works every minute of universe time, including offline, and shows its next action or reason for waiting. Development follows the selected world/system; exploration saves for a reachable destination; research inspiration keeps 200 knowledge in reserve.
+AI unlocks optional automation in Rebirth. It works every minute of universe time, including offline, and shows its next action or reason for waiting. Development follows the selected world/system; mining prioritizes the selected asteroid, local asteroids, then richer distant deposits. While exploration waits to launch, other automations protect its budget. Research inspiration keeps at least 200 knowledge in reserve. Existing saves migrate with automatic mining disabled; you can opt in with its checkbox.
 
 Offline returns recover automatically when a worker fails to load or stalls. A simulation error pauses progress and protects the saved universe, with export, retry and backup import available from the recovery card.
 

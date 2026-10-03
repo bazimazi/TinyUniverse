@@ -46,5 +46,5 @@ export function validateDetails(state: Universe): void {
   check(state.achievements.every(a => text(a)) && state.artifacts.every(a => text(a)) && state.achievements.length === new Set(state.achievements).size, 'collections');
   check(record(state.meta) && Number.isInteger(state.meta.runs) && finite(state.meta.runs) && finite(state.meta.cosmicKnowledge) && finite(state.meta.earnedKnowledge) && record(state.meta.laws) && ['production', 'evolution', 'research', 'offline'].every(key => Number.isInteger(state.meta.laws[key as keyof typeof state.meta.laws]) && finite(state.meta.laws[key as keyof typeof state.meta.laws], 0, 20)), 'universal laws');
   for (const modifiers of [state.meta.activeModifiers, state.meta.nextModifiers]) check(Array.isArray(modifiers) && modifiers.length <= 2 && modifiers.every(id => ['abundant-minerals', 'fast-evolution', 'high-gravity', 'ancient-universe', 'unstable-stars'].includes(id)), 'universe modifiers');
-  check(record(state.automation) && ['explore', 'develop', 'assist', 'research'].every(key => typeof state.automation[key as keyof typeof state.automation] === 'boolean'), 'automation');
+  check(record(state.automation) && ['explore', 'develop', 'assist', 'research', 'mine'].every(key => typeof state.automation[key as keyof typeof state.automation] === 'boolean'), 'automation');
 }

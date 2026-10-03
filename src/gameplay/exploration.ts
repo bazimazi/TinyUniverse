@@ -84,8 +84,8 @@ export function completeExploration(state: Universe): void {
 export function mineAsteroid(state: Universe, id: string): ActionResult {
   const object = state.objects[id];
   if (object?.type !== 'asteroid' || object.mined) return { ok: false, message: 'Choose an unmined asteroid.' };
-  if (!spend(state, { energy: 60, matter: 25 })) return { ok: false, message: 'A mining station needs 60 energy and 25 matter.' };
-  object.mined = true; state.resources.minerals += object.deposit;
+  if (!spend(state, BALANCE.asteroidCost)) return { ok: false, message: 'A mining station needs 60 energy and 25 matter.' };
+  object.mined = true; state.resources.minerals = Math.min(BALANCE.resourceLimit, state.resources.minerals + object.deposit);
   logEvent(state, 'AsteroidMined', id, `A mining outpost on ${object.name}`, 'A mineral deposit recovered; the outpost now supplies a steady stream of minerals.');
   return { ok: true, message: 'Mining outpost established.' };
 }

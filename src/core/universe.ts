@@ -35,7 +35,7 @@ export function createUniverse(seed = 1307, timestamp = Date.now()): Universe {
     galaxies: { 'galaxy-0': initialGalaxy(seed, 'galaxy-0') },
     relations: {}, megastructures: {},
     discoveries: {}, anomalies: {}, achievements: [], artifacts: [], records: { peakPopulation: 0, mostAdvanced: 0, mostWorlds: 1, mostSpecies: 0, longestCivilization: 0 },
-    meta: initialMeta(), automation: { explore: false, develop: false, assist: false, research: false },
+    meta: initialMeta(), automation: { explore: false, develop: false, assist: false, research: false, mine: false },
     settings: { reducedMotion: false, highContrast: false, largeText: false, sound: false, music: false, haptics: false }
   };
 }
