@@ -7,7 +7,7 @@ import { hasTechnology } from '../simulation/civilizations.ts';
 import { canDetailSystem, generateSystem, nextSystemIndex } from './systems.ts';
 import { discoverGalaxy } from './galaxies.ts';
 import { findAnomaly } from './discoveries.ts';
-export function startExploration(state: Universe, kind: ExploreKind = 'orbital'): ActionResult {
+export function explorationAvailability(state: Universe, kind: ExploreKind): ActionResult {
   if (!['orbital', 'interstellar', 'galactic'].includes(kind)) return { ok: false, message: 'Choose an orbital, interstellar or galactic expedition.' };
   if (state.totalUpgrades < BALANCE.exploration.unlockUpgrades) return { ok: false, message: 'Build two planet upgrades to unlock orbital exploration.' };
   if (state.exploration.job) return { ok: false, message: 'An expedition is already underway.' };
@@ -19,6 +19,13 @@ export function startExploration(state: Universe, kind: ExploreKind = 'orbital')
   const home = target.type === 'planet' ? target : Object.values(state.objects).find(o => o.systemId === target.systemId && o.planet) ?? state.objects['planet-0'];
   const galaxy = state.galaxies[state.systems[home.systemId].galaxyId];
   if (kind === 'interstellar' && galaxy.surveyed >= galaxy.totalSystems) return { ok: false, message: 'This galaxy is fully surveyed. Explore another reach.' };
+  return { ok: true, message: 'An expedition can reach this destination.' };
+}
+export function startExploration(state: Universe, kind: ExploreKind = 'orbital'): ActionResult {
+  const availability = explorationAvailability(state, kind);
+  if (!availability.ok) return availability;
+  const target = state.objects[state.selectedId];
+  const home = target.type === 'planet' ? target : Object.values(state.objects).find(o => o.systemId === target.systemId && o.planet) ?? state.objects['planet-0'];
   if (!spend(state, kind === 'orbital' ? BALANCE.exploration.cost : kind === 'interstellar' ? STELLAR_BALANCE.interstellarCost : GALAXY_BALANCE.cost)) return { ok: false, message: 'Gather resources for an expedition.' };
   state.exploration.job = { kind, targetId: home.id, startedAt: state.time, endsAt: state.time + (kind === 'orbital' ? BALANCE.exploration.duration : kind === 'interstellar' ? STELLAR_BALANCE.interstellarDuration : GALAXY_BALANCE.duration), index: state.exploration.completed[kind] };
   return { ok: true, message: kind === 'orbital' ? 'Your little probe is on its way.' : kind === 'interstellar' ? 'An expedition is heading for an uncharted star.' : 'An expedition is heading beyond the galaxy.' };

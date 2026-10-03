@@ -71,3 +71,13 @@ Portrait panel navigation stays at the bottom of the viewport with safe-area spa
 The canvas reuses a rasterized star background. [Intersection Observer](https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API) pauses drawing outside the viewport, while production and UI updates continue. Reduced-motion scenes redraw about four times per second, with immediate updates for zoom, selection, view changes and resize. Returning to the scene draws current state. Stale canvas hits cannot select an object missing from a replacement universe.
 
 Validation: 60 headless tests, 20 desktop/portrait browser checks, two production offline checks, production build, 24-hour benchmark and 32-seed playthrough gates. Browser instrumentation confirms off-screen drawing stops without pausing production, resumes on return, and drops to 3–5 draws per second with reduced motion. Crowded favorites, late navigation, large text and viewport overflow are covered. Initial and late-game layouts were reviewed at desktop and 390px portrait sizes. This verifies browser behavior; battery usage and frame rate still require measurement on physical phones.
+
+Phase 14 commit: `d0d28ff`.
+
+## Follow-up phase 15: reliable autonomous management
+
+Exploration automation falls back when technology or a charting limit makes its preferred destination unavailable. It saves resources for the preferred reachable expedition rather than continually spending them on cheaper trips. Manual and automatic expeditions share destination checks. Development balances affordable, unfinished upgrades on the selected world, or a planet in the selected system, and stops at the upgrade cap.
+
+Research assistance keeps at least 200 knowledge in reserve across multiple civilizations, skips already funded projects and respects cooldowns. Civilization assistance skips terraforming that would have no meaningful effect. Each automation shows its next action or reason for waiting, including while a checkbox has focus. AI makes these controls accessible even before spaceflight; toggles persist and run every minute of universe time, including offline.
+
+Validation: 68 headless tests, 22 desktop/portrait browser checks, two production offline checks, production build, 24-hour benchmark and 32-seed playthrough gates. New regressions cover charting capacity, unlock/resource fallbacks, selected-system development, capped upgrades, reserves, cooldowns, extinct civilizations, escaped world names, saved toggles and matching live/offline decisions. Resource totals agree within floating-point tolerance. Automation controls were visually reviewed at desktop and 390px portrait sizes.

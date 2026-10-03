@@ -25,6 +25,8 @@ For a production build, run `npm run build`, then `npm run preview`. Deploy `dis
 
 Returns show net resource changes, population, new research, discoveries and completed expeditions/construction. Browser stalls use offline catch-up at normal speed; time controls accelerate active play. Player actions save immediately. Technology recorded by fallen civilizations keeps player unlocks available until rebirth.
 
+AI unlocks optional automation in Rebirth. It works every minute of universe time, including offline, and shows its next action or reason for waiting. Development follows the selected world/system; exploration saves for a reachable destination; research inspiration keeps 200 knowledge in reserve.
+
 Suggested steps open the relevant world and panel. Evolution and research bars estimate the next milestone in universe time; upgrade cards estimate resource waiting time at 1× production. `npm run playtest` reports progression over 32 fixed seeds under a repeatable active-care policy. These checks complement human playtesting.
 
 On phones, panel navigation stays at the bottom of the screen. The observatory stops drawing off-screen while the universe keeps evolving. Reduced motion lowers drawing frequency, and a keyboard skip link opens game controls directly.

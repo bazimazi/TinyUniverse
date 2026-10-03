@@ -182,3 +182,25 @@ test('crowded favorites preserve the selected world and late navigation remains 
   await page.screenshot({ path: `artifacts/current-navigation-${test.info().project.name}.png` });
   await page.screenshot({ path: `artifacts/phase-14-${test.info().project.name}.png`, fullPage: true });
 });
+
+test('automation explains its next action, persists toggles and develops during a return', async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(41, timestamp);
+  foundCivilization(state, 'planet-0').technologies = ['ai'];
+  state.resources = { ...state.resources, energy: 1000, minerals: 1000, matter: 0 };
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, save); }, { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
+  await page.clock.pauseAt(new Date(timestamp + 1000));
+  await page.getByRole('button', { name: 'Rebirth', exact: true }).click();
+  const toggle = page.getByLabel('Automatic planet development', { exact: true });
+  await expect(page.locator('[data-automation-status="develop"]')).toHaveText('Paused.');
+  await toggle.check();
+  await expect(page.locator('[data-automation-status="develop"]')).toContainText('Next: Atmosphere stabilization on Aurelia.');
+  await page.screenshot({ path: `artifacts/phase-15-${test.info().project.name}.png`, fullPage: true });
+  await page.clock.fastForward(60000);
+  await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible();
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.totalUpgrades).toBe(1); expect(saved.automation.develop).toBe(true);
+  await page.reload(); await page.getByRole('button', { name: 'Rebirth', exact: true }).click();
+  await expect(toggle).toBeChecked(); expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});

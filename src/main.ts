@@ -17,6 +17,7 @@ import { buildStructure } from './gameplay/megastructures.ts';
 import { mediate } from './simulation/advanced.ts';
 import { investigate } from './gameplay/discoveries.ts';
 import { buyLaw, canRebirth, MODIFIERS, rebirth, rebirthReward } from './gameplay/prestige.ts';
+import { automationStatus } from './gameplay/automation.ts';
 import { hasTechnology } from './simulation/civilizations.ts';
 import { AmbientAudio } from './audio/ambient.ts';
 import { catchUp } from './simulation/offline-client.ts';
@@ -145,8 +146,11 @@ function render(): void {
     lastPanelRender = performance.now();
     if (action) [...content.querySelectorAll<HTMLElement>('[data-action]')].find(el => el.dataset.action === action && el.dataset.value === value)?.focus({ preventScroll: true });
   }
+  if (panel === 'prestige') content.querySelectorAll<HTMLElement>('[data-automation-status]').forEach(element => {
+    element.textContent = automationStatus(state, element.dataset.automationStatus as keyof typeof state.automation);
+  });
   document.querySelectorAll<HTMLButtonElement>('nav button').forEach(button => button.setAttribute('aria-current', button.dataset.value === panel ? 'page' : 'false'));
-  const unlocked: Record<Panel, boolean> = { develop: true, explore: state.totalUpgrades >= 2, civilizations: Object.keys(state.civilizations).length > 0, research: Object.keys(state.civilizations).length > 0, influence: state.totalUpgrades >= 3 || Object.keys(state.civilizations).length > 0, atlas: Object.keys(state.systems).length > 1, discoveries: Object.keys(state.discoveries).length > 0, prestige: hasTechnology(state, 'spaceflight') || state.meta.runs > 0, events: true, settings: true };
+  const unlocked: Record<Panel, boolean> = { develop: true, explore: state.totalUpgrades >= 2, civilizations: Object.keys(state.civilizations).length > 0, research: Object.keys(state.civilizations).length > 0, influence: state.totalUpgrades >= 3 || Object.keys(state.civilizations).length > 0, atlas: Object.keys(state.systems).length > 1, discoveries: Object.keys(state.discoveries).length > 0, prestige: hasTechnology(state, 'spaceflight') || hasTechnology(state, 'ai') || state.meta.runs > 0, events: true, settings: true };
   document.querySelectorAll<HTMLButtonElement>('nav button').forEach(button => { button.hidden = !unlocked[button.dataset.value as Panel]; });
   document.querySelector<HTMLButtonElement>('[data-action="view"][data-value="galaxy"]')!.hidden = Object.keys(state.systems).length < 2;
   document.querySelector<HTMLButtonElement>('[data-action="view"][data-value="universe"]')!.hidden = Object.keys(state.galaxies).length < 2;
