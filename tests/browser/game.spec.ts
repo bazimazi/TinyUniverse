@@ -15,6 +15,7 @@ test('first upgrade, selection, accessible settings and reload', async ({ page }
   await page.screenshot({ path: `artifacts/phase-1-${test.info().project.name}.png`, fullPage: true });
   await page.getByRole('button', { name: '15 minerals · 8.0 matter', exact: true }).click();
   await expect(page.locator('#rate-energy')).toHaveText('+4.0 /s');
+  expect(await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).objects['planet-0'].upgrades.solar, SAVE_KEY)).toBe(1);
   await page.getByRole('button', { name: 'System', exact: true }).click();
   await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
   await page.getByLabel('Reduced motion', { exact: true }).check();
@@ -52,7 +53,14 @@ test('a large offline return runs in a worker and restores the atlas', async ({ 
   await page.addInitScript(({ key, save }) => localStorage.setItem(key, save), { key: SAVE_KEY, save: serialize(state) });
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/'); await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
-  await expect(page.locator('#age')).toContainText('1.0h'); await page.getByRole('button', { name: 'Atlas', exact: true }).click();
+  await expect(page.locator('#age')).toContainText('1.0h');
+  await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible();
+  await expect(page.getByLabel('Net resource changes').locator('strong').first()).toHaveText(/^\+/);
+  await page.locator('#offline-report').screenshot({ path: `artifacts/return-summary-${test.info().project.name}.png` });
+  await page.getByRole('button', { name: 'Open journal', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Universe journal' })).toBeVisible();
+  await expect(page.locator('#offline-report')).toBeHidden();
+  await page.getByRole('button', { name: 'Atlas', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Cosmic atlas' })).toBeVisible(); expect(errors).toEqual([]);
 });
 test('evolved world exposes civilization history and working intervention', async ({ page }) => {
@@ -66,4 +74,53 @@ test('evolved world exposes civilization history and working intervention', asyn
   await page.locator('.card').filter({ hasText: 'Gentle terraforming' }).getByRole('button').click();
   await expect(page.locator('.card').filter({ hasText: 'Gentle terraforming' }).getByRole('button')).toBeDisabled();
   await expect(page.getByRole('button', { name: '2×', exact: true })).toBeVisible();
+});
+
+test('a visible browser stall catches up once at the offline rate', async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(41, timestamp);
+  foundCivilization(state, 'planet-0').technologies = ['spaceflight']; state.speed = 5;
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => localStorage.setItem(key, save), { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
+  await page.clock.pauseAt(new Date(timestamp + 1000));
+  await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+  await page.getByRole('button', { name: 'Save now', exact: true }).click();
+  const before = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).time as number, SAVE_KEY);
+  await page.clock.fastForward(60000);
+  await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible();
+  const after = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).time as number, SAVE_KEY);
+  expect(after - before).toBeGreaterThanOrEqual(59); expect(after - before).toBeLessThanOrEqual(61);
+  await page.getByRole('button', { name: 'Continue exploring', exact: true }).click();
+  await page.clock.runFor(1000); await page.getByRole('button', { name: 'Save now', exact: true }).click();
+  const live = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).time as number, SAVE_KEY);
+  expect(live - after).toBeGreaterThanOrEqual(4.9); expect(live - after).toBeLessThanOrEqual(5.1);
+  await expect(page.locator('#offline-report')).toBeHidden();
+});
+
+test('large save imports catch up in a worker and invalid imports preserve progress', async ({ page }) => {
+  await page.goto('/'); await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+  const imported = createUniverse(77, Date.now() - 3600000); for (let i = 0; i < 9; i++) generateSystem(imported, i);
+  let workers = 0; page.on('worker', () => workers++);
+  page.once('dialog', dialog => dialog.accept());
+  await page.locator('#import-file').setInputFiles({ name: 'universe.json', mimeType: 'application/json', buffer: Buffer.from(serialize(imported)) });
+  await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible();
+  await expect(page.locator('#toast')).toHaveText('Your universe has been restored.');
+  expect(workers).toBe(1);
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.seed).toBe(77); expect(saved.time).toBeGreaterThanOrEqual(3600);
+  await page.locator('#import-file').setInputFiles({ name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{"format":"TinyUniverse","payload":"{}","checksum":0}') });
+  await expect(page.locator('#toast')).toHaveText('Save file is incomplete or corrupted.');
+  expect(await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).seed, SAVE_KEY)).toBe(77);
+});
+
+test('open civilization histories stay with their civilization when following reorders cards', async ({ page }) => {
+  const state = createUniverse(41, Date.now()); generateSystem(state, 0);
+  const a = foundCivilization(state, 'planet-0'), b = foundCivilization(state, 'galaxy-0-system-0-planet-0');
+  await page.addInitScript(({ key, save }) => localStorage.setItem(key, save), { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await page.getByRole('button', { name: 'Life', exact: true }).click();
+  const history = page.locator(`details[data-details-key="${a.id}"]`);
+  await history.locator('summary').click();
+  await page.locator(`[data-action="follow"][data-value="${b.id}"]`).click();
+  await expect(history).toHaveAttribute('open', '');
+  await expect(page.locator(`details[data-details-key="${b.id}"]`)).not.toHaveAttribute('open', '');
 });

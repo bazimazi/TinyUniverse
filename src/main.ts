@@ -4,7 +4,7 @@ import { createUniverse } from './core/universe.ts';
 import { RESOURCE_IDS } from './core/types.ts';
 import type { ExploreKind, LawId, Settings, StructureType, UpgradeId } from './core/types.ts';
 import { buyUpgrade, rates } from './simulation/economy.ts';
-import { advance, resumeOffline } from './simulation/engine.ts';
+import { advance } from './simulation/engine.ts';
 import { deserialize, load, save, serialize, SAVE_KEY } from './persistence/save.ts';
 import { Scene } from './rendering/scene.ts';
 import { duration, number } from './ui/format.ts';
@@ -18,6 +18,9 @@ import { buyLaw, canRebirth, MODIFIERS, rebirth, rebirthReward } from './gamepla
 import { hasTechnology } from './simulation/civilizations.ts';
 import { AmbientAudio } from './audio/ambient.ts';
 import { catchUp } from './simulation/offline-client.ts';
+import { SessionClock } from './simulation/session-clock.ts';
+import type { OfflineReport } from './simulation/offline-report.ts';
+import { offlineReportContent } from './ui/offline.ts';
 import type { Panel } from './ui/panels.ts';
 
 let loaded: ReturnType<typeof load>;
@@ -30,23 +33,26 @@ let lastPanelRender = 0;
 let lastInteraction = 0;
 let lastRenderedPanel: Panel = 'develop';
 document.querySelector('#app')!.innerHTML = '<div class="loading" role="status">Your universe is waking up…</div>';
-let offline = { seconds: 0, capped: false };
+let offline: OfflineReport | null = null;
 if (loaded.state) {
   try { const caught = await catchUp(state, Date.now()); state = caught.state; offline = caught.result; }
   catch (error) { savingBlocked = true; loaded.warning = (error as Error).message; }
 } else state.settings.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let resuming = false;
+const sessionClock = new SessionClock(Date.now(), performance.now());
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <header><a class="brand" href="/" aria-label="Tiny Universe home"><span class="brand-icon">✦</span> TINY UNIVERSE</a><button class="icon-button" data-action="tab" data-value="settings" aria-label="Settings">⚙</button></header>
+  <header><a class="brand" href="${import.meta.env.BASE_URL}" aria-label="Tiny Universe home"><span class="brand-icon">✦</span> TINY UNIVERSE</a><button class="icon-button" data-action="tab" data-value="settings" aria-label="Settings">⚙</button></header>
   <div id="resources" class="resources" aria-label="Resource balances">${RESOURCE_IDS.map(id => `<div class="resource ${id}"><span>${id === 'biology' ? 'Biological potential' : id[0].toUpperCase() + id.slice(1)}</span><strong id="amount-${id}">0</strong><small id="rate-${id}">+0 /s</small></div>`).join('')}</div>
+  <section id="offline-report" class="return-summary" aria-labelledby="return-title" hidden></section>
   <main><section class="observatory" aria-label="Celestial observatory"><div class="scene-head"><span class="eyebrow">THE UNIVERSE IS WAKING UP</span><span id="age" class="muted"></span></div>
   <canvas id="universe" aria-label="Interactive celestial scene. Use the world list to select objects with a keyboard." role="img"></canvas>
   <div class="scene-controls"><button class="secondary" data-action="view" data-value="planet">Planet</button><button class="secondary" data-action="view" data-value="system">System</button><button class="icon-button" data-action="zoom" data-value="1.2" aria-label="Zoom in">+</button><button class="icon-button" data-action="zoom" data-value="0.8" aria-label="Zoom out">−</button></div><div class="scene-controls"><button class="secondary" data-action="view" data-value="galaxy">Galaxy</button><button class="secondary" data-action="view" data-value="universe">Universe</button></div><div id="time-controls" class="scene-controls" aria-label="Simulation speed"></div>
   <div id="goal" class="goal"></div><div id="worlds" class="worlds" aria-label="Select a celestial object"></div></section>
   <section class="dashboard"><nav aria-label="Game panels">${Object.entries(PANEL_LABELS).map(([id, label]) => `<button data-action="tab" data-value="${id}">${label}</button>`).join('')}</nav><div id="panel"></div></section></main>
   <footer>A little world. A living universe. <span id="save-status">Autosave enabled</span></footer><div id="toast" role="status" aria-live="polite"></div>`;
-const scene = new Scene(document.querySelector<HTMLCanvasElement>('#universe')!, id => { state.selectedId = id; lastPanel = ''; render(); });
+const scene = new Scene(document.querySelector<HTMLCanvasElement>('#universe')!, id => { if (resuming || !settleLive()) return; state.selectedId = id; lastPanel = ''; render(); persist(); });
 const content = document.querySelector<HTMLDivElement>('#panel')!;
+const returnSummary = document.querySelector<HTMLElement>('#offline-report')!;
 const ambient = new AmbientAudio();
 let lastSoundEvent = state.events.at(-1)?.id;
 let toastTimer: ReturnType<typeof setTimeout>;
@@ -60,11 +66,37 @@ function persist(notify = false): void {
   if (resuming) return;
   if (savingBlocked) { if (notify) toast('Save is protected. Import a backup or choose Start fresh in settings.'); return; }
   try {
-    state.lastTimestamp = Math.max(state.lastTimestamp, Date.now());
     save(localStorage, state);
     document.querySelector('#save-status')!.textContent = 'Universe saved';
     if (notify) toast('Your universe is safely saved.');
   } catch { savingBlocked = true; toast('Unable to save to browser storage. Export your universe to keep it.'); }
+}
+function showReturn(report: OfflineReport | null): void {
+  if (!report || report.seconds <= 5) return;
+  returnSummary.innerHTML = offlineReportContent(report);
+  returnSummary.hidden = false;
+}
+async function restoreRuntime(): Promise<void> {
+  if (resuming) return;
+  resuming = true;
+  document.querySelector('#save-status')!.textContent = 'Your universe is catching up…';
+  try {
+    const caught = await catchUp(state, Date.now());
+    state = caught.state;
+    sessionClock.reset(state.lastTimestamp, performance.now());
+    showReturn(caught.result);
+    if (!document.hidden) ambient.configure(state.settings, scene.view);
+  } catch (error) { savingBlocked = true; toast((error as Error).message); }
+  finally { resuming = false; persist(); lastPanel = ''; render(); }
+}
+function settleLive(now = performance.now()): boolean {
+  if (resuming) return false;
+  const timestamp = Date.now(), step = sessionClock.sample(timestamp, now);
+  if (step.needsCatchUp) { void restoreRuntime(); return false; }
+  advance(state, step.seconds * Math.min(state.speed, maximumSpeed(state)));
+  // The timestamp tracks credited time, independently of when an autosave occurs.
+  state.lastTimestamp = Math.max(state.lastTimestamp, timestamp);
+  return true;
 }
 function render(): void {
   const production = rates(state);
@@ -99,9 +131,9 @@ function render(): void {
     const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const action = focused?.dataset.action, value = focused?.dataset.value;
     const seedText = document.querySelector<HTMLInputElement>('#rebirth-seed')?.value;
-    const openDetails = lastRenderedPanel === panel ? [...content.querySelectorAll('details')].map(details => details.open) : [];
+    const openDetails = new Set(lastRenderedPanel === panel ? [...content.querySelectorAll('details')].flatMap((details, index) => details.open ? [details.dataset.detailsKey ?? String(index)] : []) : []);
     content.innerHTML = html; lastPanel = html;
-    content.querySelectorAll('details').forEach((details, index) => { details.open = openDetails[index] ?? false; });
+    content.querySelectorAll('details').forEach((details, index) => { details.open = openDetails.has(details.dataset.detailsKey ?? String(index)); });
     const seedInput = document.querySelector<HTMLInputElement>('#rebirth-seed');
     if (seedInput && seedText !== undefined) seedInput.value = seedText;
     lastRenderedPanel = panel;
@@ -123,8 +155,10 @@ document.addEventListener('click', async event => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>('button[data-action]');
   if (!button) return;
   const { action, value = '' } = button.dataset;
-  if (resuming) return;
+  if (resuming || !settleLive()) return;
   if (action === 'tab') panel = value as Panel;
+  if (action === 'dismiss-return' || action === 'return-journal') returnSummary.hidden = true;
+  if (action === 'return-journal') panel = 'events';
   if (action === 'select') state.selectedId = value;
   if (action === 'favorite') state.objects[state.selectedId].favorite = !state.objects[state.selectedId].favorite;
   if (action === 'rename') { const name = window.prompt('Name this world', state.objects[state.selectedId].name)?.trim().slice(0, 40); if (name) state.objects[state.selectedId].name = name; }
@@ -139,7 +173,7 @@ document.addEventListener('click', async event => {
   if (action === 'investigate') { const [id, choice] = value.split('|'); toast(investigate(state, id, (choice || null) as 'preserve' | 'decode' | null).message); }
   if (action === 'law') toast(buyLaw(state, value as LawId).message);
   if (action === 'rebirth' && canRebirth(state) && window.confirm(`Rebirth this universe for ${rebirthReward(state)} Cosmic Knowledge? Worlds, civilizations and local resources reset. Discoveries, artifacts, achievements, records and laws remain.`)) {
-    try { const seed = document.querySelector<HTMLInputElement>('#rebirth-seed')?.value; state = rebirth(state, seed ? Number(seed) : undefined); scene.view = 'planet'; panel = 'develop'; persist(); toast('A new universe is waking up.'); } catch (error) { toast((error as Error).message); }
+    try { const seed = document.querySelector<HTMLInputElement>('#rebirth-seed')?.value; state = rebirth(state, seed ? Number(seed) : undefined); sessionClock.reset(state.lastTimestamp, performance.now()); returnSummary.hidden = true; scene.view = 'planet'; panel = 'develop'; persist(); toast('A new universe is waking up.'); } catch (error) { toast((error as Error).message); }
   }
   if (action === 'ability') toast(useAbility(state, value, state.selectedId).message);
   if (action === 'speed') state.speed = Math.min(maximumSpeed(state), Number(value));
@@ -153,13 +187,15 @@ document.addEventListener('click', async event => {
   }
   if (action === 'reset' && window.confirm('Start a new universe? Current progress will be replaced. Export a save first to keep it.')) {
     try { const raw = localStorage.getItem(SAVE_KEY); if (raw) localStorage.setItem(`${SAVE_KEY}.archive`, raw); } catch { /* Exports remain available. */ }
-    state = createUniverse(); scene.view = 'planet'; savingBlocked = false; persist(true);
+    state = createUniverse(); sessionClock.reset(state.lastTimestamp, performance.now()); returnSummary.hidden = true; scene.view = 'planet'; savingBlocked = false; persist(true);
   }
+  if (['select', 'favorite', 'rename', 'upgrade', 'explore', 'mine', 'build', 'mediate', 'investigate', 'law', 'ability', 'speed', 'debug', 'follow'].includes(action!)) persist();
   lastPanel = ''; render();
+  if (action === 'return-journal') document.querySelector('.dashboard')!.scrollIntoView({ behavior: state.settings.reducedMotion ? 'instant' : 'smooth' });
   if (state.settings.haptics) navigator.vibrate?.(10);
 });
 document.addEventListener('change', async event => {
-  if (resuming) return;
+  if (resuming || !settleLive()) return;
   const input = event.target as HTMLInputElement;
   if (input.id === 'rebirth-seed') return;
   if (input.dataset.setting) { state.settings[input.dataset.setting as keyof Settings] = input.checked; ambient.configure(state.settings, scene.view); persist(); }
@@ -171,39 +207,36 @@ document.addEventListener('change', async event => {
     persist();
   }
   if (input.id === 'import-file' && input.files?.[0]) {
+    resuming = true;
     try {
       const imported = deserialize(await input.files[0].text());
       if (!window.confirm('Replace your current universe with this save?')) return;
-      state = imported; resumeOffline(state, Date.now()); scene.view = 'planet'; savingBlocked = false; persist(); toast('Your universe has been restored.');
+      const caught = await catchUp(imported, Date.now());
+      state = caught.state; sessionClock.reset(state.lastTimestamp, performance.now()); returnSummary.hidden = true; showReturn(caught.result);
+      scene.view = 'planet'; savingBlocked = false; resuming = false; persist(); toast('Your universe has been restored.');
     } catch (error) { toast(error instanceof Error ? error.message : 'Unable to read save.'); }
+    finally { resuming = false; }
   }
   lastPanel = ''; render();
 });
-let previous = performance.now(), lastRender = 0;
+let lastRender = 0;
 document.addEventListener('pointerdown', () => { lastInteraction = performance.now(); ambient.configure(state.settings, scene.view); }, { passive: true });
 document.addEventListener('keydown', () => { lastInteraction = performance.now(); });
 function frame(now: number): void {
   if (!document.hidden) {
-    if (!resuming) advance(state, Math.min(5, Math.max(0, (now - previous) / 1000)) * Math.min(state.speed, maximumSpeed(state)));
+    settleLive(now);
     if (now - lastRender > 250) { render(); lastRender = now; }
     scene.draw(state);
   }
-  previous = now; requestAnimationFrame(frame);
+  requestAnimationFrame(frame);
 }
-document.addEventListener('visibilitychange', async () => {
-  if (document.hidden) { persist(); ambient.suspend(); }
-  else {
-    if (resuming) return;
-    resuming = true;
-    try { const caught = await catchUp(state, Date.now()); state = caught.state; previous = performance.now(); ambient.configure(state.settings, scene.view); if (caught.result.seconds > 5) toast(`Welcome back. Your universe evolved for ${duration(caught.result.seconds)}.`); }
-    catch (error) { savingBlocked = true; toast((error as Error).message); }
-    finally { resuming = false; persist(); render(); }
-  }
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { settleLive(); persist(); ambient.suspend(); }
+  else void restoreRuntime();
 });
-window.addEventListener('pagehide', () => persist());
+window.addEventListener('pagehide', () => { settleLive(); persist(); });
 setInterval(() => persist(), 15000);
 if (import.meta.env.DEV) setInterval(() => assertUniverse(state), 5000);
-render(); requestAnimationFrame(frame);
+render(); showReturn(offline); persist(); requestAnimationFrame(frame);
 if (loaded.warning) toast(loaded.warning);
-else if (offline.seconds > 5) toast(`Welcome back. ${duration(offline.seconds)} of progress${offline.capped ? ' (offline cap reached)' : ''}.`);
 if (import.meta.env.PROD && 'serviceWorker' in navigator) void navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => { /* Idle saves still work without an installed offline cache. */ });

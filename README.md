@@ -22,6 +22,8 @@ npm run test:production
 
 For a production build, run `npm run build`, then `npm run preview`. Deploy `dist` to a static HTTPS host. After its first online load, the production app caches its assets and can launch offline. Browser saves belong to the current origin; Settings > Export save creates a portable backup. Initial offline progress is capped at 24 hours, with permanent upgrades extending it to seven days.
 
+Returns show net resource changes, population, new research, discoveries and completed expeditions/construction. Browser stalls use offline catch-up at normal speed; time controls accelerate active play. Player actions save immediately. Technology recorded by fallen civilizations keeps player unlocks available until rebirth.
+
 Development builds include an inspector and simulation tools in Settings. Accessibility controls include reduced motion, large text, high contrast, optional music/discovery sounds and haptics. No network telemetry or monetization is included.
 
 See [phase commits and validation](docs/IMPLEMENTATION.md), [architecture and limits](docs/ARCHITECTURE.md), [design research](docs/RESEARCH.md), and the [original product plan](docs/PRODUCT_PLAN.md).

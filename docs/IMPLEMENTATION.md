@@ -41,3 +41,13 @@ Interstellar expeditions now choose the first uncharted procedural address in th
 Player technology unlocks retain the recorded knowledge of fallen civilizations until rebirth. Extinct civilizations cannot build or resume research. Exploration controls reflect capacity limits, and expedition messages describe their destination.
 
 Validation: 46 headless tests, eight desktop/portrait browser checks, two production offline-launch checks, production build and the 24-hour benchmark. Six new regression tests cover destination collisions, bounds, refunds, aggregate surveys, collapse/rebirth unlocks and invalid expedition schedules. The benchmark completed in approximately 1.3 seconds on this machine.
+
+Phase 11 commit: `173c13d`.
+
+## Follow-up phase 12: time recovery and return summaries
+
+Long frame/wall-clock gaps now use capped offline catch-up at normal speed. Live timestamps track credited simulation rather than the last autosave, and stale animation frames cannot double-count time already credited by input events. Catch-up works on an isolated state; save imports use the worker for large returns before replacing the current universe. Scene and action mutations are blocked while catch-up runs. Player actions save immediately.
+
+The return card shows net resource changes (including automation spending), population, newly recorded technology, new civilizations/collapse, expeditions, construction, Codex entries and recent moments. It can be dismissed or used to open the journal. Civilization histories keep their expanded state when following reorders cards. The home link respects relative deployment paths. Existing save versions remain compatible.
+
+Validation: 52 headless tests, 14 desktop/portrait browser checks and two production offline checks, plus the production build and 24-hour benchmark. New coverage exercises atomic catch-up, caps, costs in reports, escaping, stale frames, accelerated live time followed by a stall, worker imports, rejected imports and reordered histories. Production checks also import a large save and load the cached worker with the network disabled. Return summaries were visually reviewed at desktop and 390px portrait widths. The final 24-hour benchmark completed in approximately 0.9 seconds on this machine. Browser time jumps use [Playwright's documented Clock API](https://playwright.dev/docs/clock).
