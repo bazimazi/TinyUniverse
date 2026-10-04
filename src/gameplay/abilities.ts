@@ -1,4 +1,4 @@
-import type { ActionResult, CelestialObject, Cost, Universe } from '../core/types.ts';
+import type { ActionResult, CelestialObject, Civilization, Cost, Universe } from '../core/types.ts';
 import { INFLUENCE_BALANCE, STELLAR_BALANCE } from '../core/config.ts';
 import { TECHNOLOGIES } from '../core/technology.ts';
 import { logEvent } from '../core/universe.ts';
@@ -25,18 +25,20 @@ export function orbitAfterInfluence(object: CelestialObject, id: 'push' | 'pull'
   const ratio = radius / object.orbit.radius;
   return { radius, period: Math.max(1, object.orbit.period * ratio ** 1.5), temperature: Math.max(1, Math.min(10000, object.planet.temperature / Math.sqrt(ratio))) };
 }
-export function abilityCooldown(state: Universe, id: string, targetId: string): number {
+function cooldownFor(state: Universe, id: string, targetId: string, civ?: Civilization): number {
   const keys = id === 'push' || id === 'pull' ? ['push', 'pull'] : [id];
-  const civ = id === 'gift' || id === 'inspire' ? civilizationAt(state, targetId, true) : undefined;
   const targets = civ ? new Set([civ.planetId, ...civ.colonies]) : [targetId];
   return Math.max(0, ...[...targets].flatMap(target => keys.map(key => (state.cooldowns[`${key}:${target}`] ?? 0) - state.time)));
+}
+export function abilityCooldown(state: Universe, id: string, targetId: string): number {
+  return cooldownFor(state, id, targetId, id === 'gift' || id === 'inspire' ? civilizationAt(state, targetId, true) : undefined);
 }
 export interface AbilityReadiness extends ActionResult { reason: 'ready' | 'locked' | 'target' | 'opportunity' | 'cooldown' | 'resources'; cooldown: number }
 export function abilityReadiness(state: Universe, id: string, targetId: string): AbilityReadiness {
   const fail = (reason: AbilityReadiness['reason'], message: string, cooldown = 0): AbilityReadiness => ({ ok: false, reason, message, cooldown });
   if (!Object.hasOwn(ABILITIES, id) || !Object.hasOwn(state.objects, targetId)) return fail('target', 'Choose a valid world and influence.');
   const ability = ABILITIES[id], object = state.objects[targetId];
-  const civ = civilizationAt(state, targetId, true);
+  const civ = ability.target === 'civilization' ? civilizationAt(state, targetId, true) : undefined;
   if (ability.requires && !hasTechnology(state, ability.requires)) return fail('locked', `Requires ${TECHNOLOGIES[ability.requires].name} research.`);
   if (ability.target === 'planet' && !object.planet || ability.target === 'civilization' && !civ || ability.target === 'asteroid' && object.type !== 'asteroid') return fail('target', `This influence needs ${ability.target === 'asteroid' ? 'an' : 'a'} ${ability.target}.`);
   if (ability.target === 'star' && (!object.stellar || object.stellar.stage === 'remnant' || object.type !== 'star')) return fail('target', 'Select a living star to suppress its flares.');
@@ -55,7 +57,7 @@ export function abilityReadiness(state: Universe, id: string, targetId: string):
     if (object.parentId && state.objects[object.parentId].planet) return fail('opportunity', 'This asteroid is already a planetary companion.');
     if (!Object.values(state.objects).some(o => o.systemId === object.systemId && o.planet)) return fail('target', 'A planet in this system is needed for capture.');
   }
-  const cooldown = abilityCooldown(state, id, targetId);
+  const cooldown = cooldownFor(state, id, targetId, civ);
   if (cooldown > 0) return fail('cooldown', 'This influence is still recovering.', cooldown);
   if (!canAfford(state, ability.cost)) return fail('resources', 'Gather the resources for this influence.');
   return { ok: true, reason: 'ready', cooldown: 0, message: 'Ready to influence this world.' };

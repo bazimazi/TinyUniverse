@@ -11,7 +11,9 @@ test('production app caches its assets and launches without a network', async ({
   await page.getByRole('button', { name: 'Settings', exact: true }).first().click(); await expect(page.getByText('Developer tools', { exact: true })).toHaveCount(0);
   await page.getByLabel('Discovery sounds', { exact: true }).check(); await page.getByLabel('Ambient music', { exact: true }).check(); await page.getByLabel('Ambient music', { exact: true }).uncheck();
   const imported = createUniverse(77, Date.now() - 3600000); for (let i = 0; i < 9; i++) generateSystem(imported, i);
-  foundCivilization(imported, 'planet-0').technologies = ['ai']; imported.automation.mine = true; imported.resources.energy = imported.resources.matter = 1000;
+  const civ = foundCivilization(imported, 'planet-0'); civ.technologies = ['ai', 'spaceflight']; imported.automation.mine = true; imported.resources.energy = imported.resources.matter = 1000;
+  imported.objects['planet-0'].planet!.temperature = 600; imported.objects['planet-0'].planet!.habitability = 0;
+  const habitatId = `${civ.id}:habitat`; imported.megastructures[habitatId] = { id: habitatId, type: 'habitat', civilizationId: civ.id, systemId: 'system-0', startedAt: 0, endsAt: 45, status: 'building' };
   imported.objects['star-0'].stellar!.flareAt = 45; imported.objects['star-0'].stellar!.suppressedUntil = 3601;
   const asteroid = makeObject(imported.seed, 'offline-asteroid', 'asteroid', 'star-0'); imported.objects[asteroid.id] = asteroid; imported.objects['star-0'].children.push(asteroid.id);
   let workers = 0; page.on('worker', () => workers++); page.once('dialog', dialog => dialog.accept());
@@ -21,6 +23,7 @@ test('production app caches its assets and launches without a network', async ({
   expect(await page.evaluate(({ key, id }) => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload).objects[id].mined, { key: SAVE_KEY, id: asteroid.id })).toBe(true);
   const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
   expect(saved.discoveries['cosmic:flare-suppressed']).toBeDefined(); expect(saved.objects['star-0'].stellar.lastActivityAt).toBe(3600);
+  expect(saved.megastructures[habitatId].status).toBe('complete'); expect(saved.civilizations[civ.id].status).toBe('active'); expect(saved.civilizations[civ.id].population).toBeGreaterThan(0);
   await expect(page.locator('#age')).toContainText('1.0h'); expect(workers).toBe(1);
   expect(errors).toEqual([]);
 });

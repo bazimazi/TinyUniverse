@@ -41,6 +41,7 @@ export function simulateAdvanced(state: Universe): void {
   const civilizations = Object.values(state.civilizations).filter(c => c.status === 'active' && c.technologies.includes('spaceflight'));
   let relationCount = Object.keys(state.relations).length;
   for (const civ of civilizations) {
+    if (Object.keys(state.megastructures).length >= ADVANCED_BALANCE.maxStructures) break;
     const sites = new Map<string, string>();
     for (const id of new Set([civ.planetId, ...civ.colonies])) if (!sites.has(state.objects[id].systemId)) sites.set(state.objects[id].systemId, id);
     construction: for (const worldId of sites.values()) for (const type of Object.keys(STRUCTURES) as StructureType[]) {

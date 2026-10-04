@@ -5,7 +5,7 @@ export const BALANCE = {
   costGrowth: 1.7, maxUpgrade: 20, resourceLimit: 1e100, maxObjects: 256,
   exploration: { cost: { energy: 90, minerals: 30 }, duration: 45, unlockUpgrades: 2 }, asteroidYield: 2.5, asteroidCost: { energy: 60, matter: 25 },
   life: { simpleAt: 60, complexAt: 240, intelligentAt: 540, growth: 0.006, eventChance: 0.008, minimumHabitability: 0.35 },
-  civilization: { basePopulation: 1000, growth: 0.0008, capacity: 1e7, research: 1.5, collapseDelay: 180, maxHistory: 48 }
+  civilization: { basePopulation: 1000, growth: 0.0008, capacity: 1e7, research: 1.5, collapseDelay: 180, maxHistory: 48, habitatCapacity: 1e6, habitatHabitability: 0.8, habitatFood: 0.8 }
 };
 export const SAVE_VERSION = 12;
 export const INFLUENCE_BALANCE = { orbitMin: 60, orbitMax: 800, orbitFactor: 1.12, gravityMin: 0.25, gravityMax: 4 };

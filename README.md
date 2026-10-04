@@ -37,6 +37,8 @@ Stars warn 90 seconds before a flare in universe time. Atmospheres and magnetic 
 
 Select a civilization’s home world or colony in Life to support megastructure construction in that system. The civilization needs its own Interstellar travel research to build remotely. One structure of each kind can exist per civilization in each settled system; construction controls explain technology, site and resource requirements. Civilizations also build in their colony systems using industry.
 
+Colonies and completed orbital habitats sustain their civilization’s shared population. Each owned habitat adds capacity for one million people with controlled living conditions and food. Healthy settlements can keep a civilization alive when its home world becomes hostile. Life shows its total potential capacity and supporting worlds and habitats.
+
 Suggested steps open the relevant world and panel. Evolution and research bars estimate the next milestone in universe time; upgrade cards estimate resource waiting time at 1× production. `npm run playtest` reports progression over 32 fixed seeds under a repeatable active-care policy. These checks complement human playtesting.
 
 On phones, panel navigation stays at the bottom of the screen. The observatory stops drawing off-screen while the universe keeps evolving. Reduced motion lowers drawing frequency, and a keyboard skip link opens game controls directly.

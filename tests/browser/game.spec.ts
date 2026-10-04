@@ -11,6 +11,7 @@ import { findAnomaly } from '../../src/gameplay/discoveries.ts';
 import { simulateDiscoveries } from '../../src/simulation/discoveries.ts';
 import { collapse } from '../../src/simulation/civilizations.ts';
 import { SAVE_VERSION } from '../../src/core/config.ts';
+import type { Megastructure } from '../../src/core/types.ts';
 test('first upgrade, selection, accessible settings and reload', async ({ page }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/');
@@ -108,9 +109,30 @@ test('colony construction uses its star, explains unsuitable projects and comple
   await page.reload(); await page.getByRole('button', { name: 'Life', exact: true }).click(); await expect(collector).toContainText('Building');
   await page.clock.fastForward(1200000); await expect(collector).toContainText('Complete');
   const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
-  const structure = Object.values(saved.megastructures).find((s: any) => s.type === 'black-hole-generator') as any;
+  const structure = Object.values(saved.megastructures as Record<string, Megastructure>).find(s => s.type === 'black-hole-generator')!;
   expect(structure.systemId).toBe(system.id); expect(structure.status).toBe('complete'); expect(saved.resources.exotic).toBeGreaterThan(99500);
   await page.getByRole('button', { name: 'Visit home world', exact: true }).click(); await expect(collector).toContainText('needs a black hole'); await expect(collector.getByRole('button')).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test('civilization cards report colony and habitat support through offline completion and reload', async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(12, timestamp), civ = foundCivilization(state, 'planet-0');
+  const colony = makeObject(state.seed, 'safe-colony', 'planet', 'star-0'); colony.name = 'Safe haven';
+  state.objects[colony.id] = colony; state.objects['star-0'].children.push(colony.id); civ.colonies.push(colony.id); civ.technologies = ['spaceflight'];
+  state.objects['planet-0'].planet!.temperature = 600; state.objects['planet-0'].planet!.habitability = 0;
+  state.objects['planet-0'].shieldUntil = colony.shieldUntil = 86400;
+  const id = `${civ.id}:habitat`; state.megastructures[id] = { id, type: 'habitat', civilizationId: civ.id, systemId: 'system-0', startedAt: 0, endsAt: 45, status: 'building' };
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, save); }, { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await page.clock.pauseAt(new Date(timestamp + 1000)); await page.getByRole('button', { name: 'Life', exact: true }).click();
+  const support = page.locator('[data-civilization-support]'); await expect(support).toContainText('2 settled worlds and 0 completed orbital habitats');
+  await page.clock.fastForward(240000); await expect(support).toContainText('2 settled worlds and 1 completed orbital habitat');
+  await expect(page.locator('#offline-report')).toContainText('1 megastructure completed');
+  await support.locator('..').screenshot({ path: `artifacts/phase-22-support-${test.info().project.name}.png` });
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.civilizations[civ.id].status).toBe('active'); expect(saved.civilizations[civ.id].population).toBeGreaterThan(1000);
+  expect(saved.civilizations[civ.id].distress).toBe(0); expect(saved.megastructures[id].status).toBe('complete');
+  await page.reload(); await page.getByRole('button', { name: 'Life', exact: true }).click(); await expect(support).toContainText('1 completed orbital habitat');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 test('atlas, codex, rename and rebirth remain usable in portrait and desktop', async ({ page }) => {

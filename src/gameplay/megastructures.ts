@@ -4,7 +4,7 @@ import { canAfford, spend } from '../simulation/economy.ts';
 import { civilizationEvent } from '../simulation/civilizations.ts';
 import { TECHNOLOGIES } from '../core/technology.ts';
 export const STRUCTURES: Record<StructureType, { name: string; requires: string; cost: Cost; industry: number; duration: number; description: string }> = {
-  habitat: { name: 'Orbital habitat', requires: 'spaceflight', cost: { minerals: 1500, matter: 600 }, industry: 4000, duration: 300, description: 'Room for a civilization to grow beyond its planet.' },
+  habitat: { name: 'Orbital habitat', requires: 'spaceflight', cost: { minerals: 1500, matter: 600 }, industry: 4000, duration: 300, description: 'Controlled conditions and food for up to 1M people. Supports its civilization when planetary worlds become hostile.' },
   dyson: { name: 'Dyson swarm', requires: 'dyson', cost: { minerals: 10000, matter: 4000, knowledge: 500 }, industry: 16000, duration: 900, description: 'A constellation of collectors harvesting stellar energy.' },
   wormhole: { name: 'Wormhole gateway', requires: 'wormholes', cost: { stellar: 3000, exotic: 200, knowledge: 700 }, industry: 20000, duration: 1200, description: 'A bridge between distant worlds. Generates quantum energy.' },
   'black-hole-generator': { name: 'Accretion collector', requires: 'spacetime', cost: { minerals: 12000, exotic: 500 }, industry: 20000, duration: 1200, description: 'Energy and exotic matter from a black hole.' }
