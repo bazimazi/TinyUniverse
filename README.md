@@ -39,6 +39,8 @@ Select a civilization’s home world or colony in Life to support megastructure 
 
 Colonies and completed orbital habitats sustain their civilization’s shared population. Each owned habitat adds capacity for one million people with controlled living conditions and food. Healthy settlements can keep a civilization alive when its home world becomes hostile. Life shows its total potential capacity and supporting worlds and habitats.
 
+Fallen civilizations leave recoverable archives. Choose Explore their legacy in Life, survey the ruins, then preserve their living patterns or decode their engineering. Discoveries shows each branch’s cost, duration and rewards. Completed investigations add artifacts and record the recovery in the fallen civilization’s history; a living colony owner can benefit from recovered research. Older fallen civilizations gain archives as simulation continues, within the 64-signal limit.
+
 Suggested steps open the relevant world and panel. Evolution and research bars estimate the next milestone in universe time; upgrade cards estimate resource waiting time at 1× production. `npm run playtest` reports progression over 32 fixed seeds under a repeatable active-care policy. These checks complement human playtesting.
 
 On phones, panel navigation stays at the bottom of the screen. The observatory stops drawing off-screen while the universe keeps evolving. Reduced motion lowers drawing frequency, and a keyboard skip link opens game controls directly.

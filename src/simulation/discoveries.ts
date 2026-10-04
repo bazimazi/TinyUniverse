@@ -1,4 +1,5 @@
-import { discover } from '../gameplay/discoveries.ts';
+import { discover, recordRuins, ruinsId } from '../gameplay/discoveries.ts';
+import { DISCOVERY_BALANCE } from '../core/config.ts';
 import { logEvent } from '../core/universe.ts';
 import { TECHNOLOGIES } from '../core/technology.ts';
 import type { Universe } from '../core/types.ts';
@@ -8,9 +9,11 @@ export function achievementTitle(id: string): string { const [group, tier] = id.
 export function simulateDiscoveries(state: Universe): void {
   const objects = Object.values(state.objects), civilizations = Object.values(state.civilizations), structures = Object.values(state.megastructures);
   const technologies = new Set<string>();
+  let archiveSlots = DISCOVERY_BALANCE.maxAnomalies - Object.keys(state.anomalies).length;
   for (const object of objects) if (!state.discoveries[`celestial:${object.type}`]) discover(state, { id: `celestial:${object.type}`, title: `First ${object.type.replace('-', ' ')}`, category: 'celestial', sourceId: object.id, detail: `${object.name} opened a new page in your celestial atlas.`, rarity: object.type === 'black-hole' ? 4 : 1 });
   for (const object of objects) if (object.life?.stage !== 'chemistry' && object.life && !state.discoveries[`life:${object.life.stage}`]) discover(state, { id: `life:${object.life.stage}`, title: `First ${object.life.stage} life`, category: 'biological', sourceId: object.id, detail: `Life on ${object.name} found a new way to thrive.`, rarity: 1 });
   for (const civ of civilizations) {
+    if (civ.status === 'extinct' && archiveSlots > 0 && !Object.hasOwn(state.anomalies, ruinsId(state, civ))) { recordRuins(state, civ); archiveSlots--; }
     if (!state.discoveries[`civilization:${civ.archetype}`]) discover(state, { id: `civilization:${civ.archetype}`, title: `First ${civ.archetype} civilization`, category: 'civilization', sourceId: civ.planetId, detail: civ.name, rarity: 2 });
     if (civ.status === 'extinct' && !state.discoveries['first-collapse']) discover(state, { id: 'first-collapse', title: 'A silent world', category: 'historical', sourceId: civ.planetId, detail: `${civ.name} left ruins and memories.`, rarity: 2 });
     for (const tech of civ.technologies) if (!technologies.has(tech)) {

@@ -4,6 +4,7 @@ import { entitySeed, nameFor, random } from '../core/random.ts';
 import { logEvent } from '../core/universe.ts';
 import type { Civilization, Domain, Universe } from '../core/types.ts';
 import { updateInterval } from '../core/tiers.ts';
+import { recordRuins } from '../gameplay/discoveries.ts';
 const DOMAINS: Domain[] = ['biology', 'physics', 'energy', 'computing', 'materials', 'space', 'social', 'gravity', 'quantum'];
 const TRAITS = ['Curious', 'Cooperative', 'Scientific', 'Industrial', 'Adaptive', 'Expansionist', 'Spiritual', 'Aggressive', 'Isolationist'];
 export function civilizationEvent(state: Universe, civ: Civilization, type: string, title: string, detail: string, severity: 'info' | 'wonder' | 'danger' = 'info'): void {
@@ -46,6 +47,7 @@ export function collapse(state: Universe, civ: Civilization, reason: string): vo
   civ.status = 'extinct'; civ.population = 0; civ.researching = null;
   civ.lastUpdate = state.time;
   civilizationEvent(state, civ, 'CivilizationCollapse', `${civ.name} fell silent`, `${reason} Their ruins and recorded history remain.`, 'danger');
+  recordRuins(state, civ);
 }
 export interface CivilizationEnvironment { capacity: number; habitability: number; food: number; solar: number; gravity: number; worlds: number; habitats: number }
 function environmentFor(state: Universe, civ: Civilization, habitats: number): CivilizationEnvironment {

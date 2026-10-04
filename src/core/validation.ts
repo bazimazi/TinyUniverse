@@ -1,4 +1,4 @@
-import { BALANCE, SAVE_VERSION, STELLAR_BALANCE } from './config.ts';
+import { BALANCE, DISCOVERY_BALANCE, SAVE_VERSION, STELLAR_BALANCE } from './config.ts';
 import { TECHNOLOGIES } from './technology.ts';
 import type { GameEvent, Universe } from './types.ts';
 import { ANOMALY_KINDS } from './types.ts';
@@ -42,7 +42,11 @@ export function validateDetails(state: Universe): void {
   }
   for (const relation of Object.values(state.relations)) check(Object.hasOwn(state.civilizations, relation.a) && Object.hasOwn(state.civilizations, relation.b) && finite(relation.score, -100, 100) && ['neutral', 'trade', 'alliance', 'war'].includes(relation.status) && finite(relation.lastUpdate, 0, state.time), 'diplomacy');
   for (const [id, s] of Object.entries(state.megastructures)) check(id === s.id && ['habitat', 'dyson', 'wormhole', 'black-hole-generator'].includes(s.type) && Object.hasOwn(state.civilizations, s.civilizationId) && Object.hasOwn(state.systems, s.systemId) && ['building', 'complete'].includes(s.status) && finite(s.startedAt, 0, state.time) && finite(s.endsAt, s.startedAt), 'construction');
-  for (const [id, a] of Object.entries(state.anomalies)) check(id === a.id && Object.hasOwn(state.objects, a.targetId) && finite(a.seed, 0, 4294967295) && [0, 1, 3].includes(a.stage) && ANOMALY_KINDS.includes(a.kind) && ['found', 'choice', 'resolved', 'investigating'].includes(a.status) && [null, 'preserve', 'decode'].includes(a.choice) && (a.status === 'investigating' ? finite(a.nextAt, state.time) : a.nextAt === null), 'anomaly deadline');
+  check(record(state.anomalies) && Object.keys(state.anomalies).length <= DISCOVERY_BALANCE.maxAnomalies, 'signal archive size');
+  for (const [id, a] of Object.entries(state.anomalies)) {
+    check(id === a.id && Object.hasOwn(state.objects, a.targetId) && finite(a.seed, 0, 4294967295) && [0, 1, 3].includes(a.stage) && ANOMALY_KINDS.includes(a.kind) && ['found', 'choice', 'resolved', 'investigating'].includes(a.status) && [null, 'preserve', 'decode'].includes(a.choice) && (a.status === 'investigating' ? finite(a.nextAt, state.time) : a.nextAt === null), 'anomaly deadline');
+    check(a.status === 'found' ? a.stage === 0 && a.choice === null : a.status === 'choice' ? a.stage === 1 && a.choice === null : a.status === 'resolved' ? a.stage === 3 && a.choice !== null : a.stage === 0 && a.choice === null || a.stage === 1 && a.choice !== null, 'investigation stage');
+  }
   for (const [id, d] of Object.entries(state.discoveries)) check(id === d.id && text(d.title, 200) && text(d.sourceId) && typeof d.detail === 'string' && d.detail.length <= 2000 && finite(d.time) && finite(d.rarity, 1, 20) && ['celestial', 'biological', 'civilization', 'technology', 'anomaly', 'cosmic', 'historical'].includes(d.category), 'codex');
   check(state.achievements.every(a => text(a)) && state.artifacts.every(a => text(a)) && state.achievements.length === new Set(state.achievements).size, 'collections');
   check(record(state.meta) && Number.isInteger(state.meta.runs) && finite(state.meta.runs) && finite(state.meta.cosmicKnowledge) && finite(state.meta.earnedKnowledge) && record(state.meta.laws) && ['production', 'evolution', 'research', 'offline'].every(key => Number.isInteger(state.meta.laws[key as keyof typeof state.meta.laws]) && finite(state.meta.laws[key as keyof typeof state.meta.laws], 0, 20)), 'universal laws');

@@ -56,7 +56,7 @@ test('civilizations that fall in one conflict cannot participate in later pairs 
   state.objects[planet.id] = planet; state.objects['star-0'].children.push(planet.id);
   const c = foundCivilization(state, planet.id); c.technologies = ['spaceflight'];
   a.population = 5.1; a.archetype = 'conquerors'; state.time = 600; simulateAdvanced(state);
-  assert.equal(a.status, 'extinct'); assert.equal(a.timeline.at(-1)!.type, 'CivilizationCollapse');
+  assert.equal(a.status, 'extinct'); assert.deepEqual(a.timeline.slice(-2).map(e => e.type), ['CivilizationCollapse', 'RuinsDiscovered']);
   assert.equal(state.relations[[a.id, c.id].sort().join('|')], undefined);
   assert.ok(state.relations[[b.id, c.id].sort().join('|')]); assertUniverse(state);
 });

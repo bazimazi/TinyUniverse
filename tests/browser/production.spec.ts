@@ -1,8 +1,33 @@
 import { test, expect } from '@playwright/test';
 import { createUniverse, makeObject } from '../../src/core/universe.ts';
-import { foundCivilization } from '../../src/simulation/civilizations.ts';
+import { collapse, foundCivilization } from '../../src/simulation/civilizations.ts';
 import { generateSystem } from '../../src/gameplay/systems.ts';
 import { serialize, SAVE_KEY } from '../../src/persistence/save.ts';
+import { investigate, ruinsId } from '../../src/gameplay/discoveries.ts';
+import { advance } from '../../src/simulation/engine.ts';
+test('cached production worker recovers a fallen archive and retains its artifact without a network', async ({ page, context }) => {
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/'); await page.evaluate(async () => {
+    await navigator.serviceWorker.ready;
+    if (!navigator.serviceWorker.controller) await new Promise<void>(resolve => navigator.serviceWorker.addEventListener('controllerchange', () => resolve(), { once: true }));
+  });
+  await context.setOffline(true); await page.reload(); await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
+  const imported = createUniverse(45, Date.now() - 3600000); for (let i = 0; i < 9; i++) generateSystem(imported, i);
+  const civ = foundCivilization(imported, 'planet-0'); civ.name = 'Tidekeepers'; collapse(imported, civ, 'A lost history.');
+  imported.resources.energy = imported.resources.knowledge = 10000; const id = ruinsId(imported, civ);
+  investigate(imported, id); advance(imported, 60); investigate(imported, id, 'decode');
+  let workers = 0; page.on('worker', () => workers++); page.once('dialog', dialog => dialog.accept());
+  await page.locator('#import-file').setInputFiles({ name: 'universe.json', mimeType: 'application/json', buffer: Buffer.from(serialize(imported)) });
+  await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible(); expect(workers).toBe(1);
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.anomalies[id].status).toBe('resolved'); expect(saved.artifacts).toContain(`star-map:${imported.anomalies[id].seed}`);
+  expect(saved.civilizations[civ.id].status).toBe('extinct'); expect(saved.civilizations[civ.id].population).toBe(0); expect(saved.resources.exotic).toBeGreaterThanOrEqual(60);
+  await page.getByRole('button', { name: 'Life', exact: true }).click(); await page.getByRole('button', { name: 'Explore their legacy', exact: true }).first().click();
+  await expect(page.locator('[data-anomaly]').filter({ hasText: 'Ruins of Tidekeepers' })).toContainText('You chose to decode');
+  await page.reload(); await page.getByRole('button', { name: 'Discoveries', exact: true }).click();
+  await expect(page.locator('[data-anomaly]').filter({ hasText: 'Ruins of Tidekeepers' })).toContainText('You chose to decode'); expect(errors).toEqual([]);
+});
+
 test('production app caches its assets and launches without a network', async ({ page, context }) => {
   const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
   await page.goto('/'); await expect(page.getByRole('heading', { name: 'Aurelia', exact: true })).toBeVisible();
