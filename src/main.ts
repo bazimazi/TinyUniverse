@@ -195,7 +195,7 @@ document.addEventListener('click', async event => {
   if (action === 'upgrade') toast(buyUpgrade(state, state.selectedId, value as UpgradeId).message);
   if (action === 'explore') toast(startExploration(state, (value || 'orbital') as ExploreKind).message);
   if (action === 'mine') toast(mineAsteroid(state, value).message);
-  if (action === 'build') { const [civId, type] = value.split('|'); toast(buildStructure(state, civId, type as StructureType).message); }
+  if (action === 'build') { const [civId, type, worldId] = value.split('|'); toast(buildStructure(state, civId, type as StructureType, true, worldId).message); }
   if (action === 'mediate') toast(mediate(state, value).message);
   if (action === 'investigate') { const [id, choice] = value.split('|'); toast(investigate(state, id, (choice || null) as 'preserve' | 'decode' | null).message); }
   if (action === 'law') toast(buyLaw(state, value as LawId).message);

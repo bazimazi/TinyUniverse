@@ -33,15 +33,19 @@ export function mediate(state: Universe, relationId: string): ActionResult {
 export function completeStructures(state: Universe): void {
   for (const structure of Object.values(state.megastructures)) if (structure.status === 'building' && state.time >= structure.endsAt) {
     structure.status = 'complete'; const civ = state.civilizations[structure.civilizationId];
-    civilizationEvent(state, civ, 'MegastructureBuilt', `${civ.name}: ${STRUCTURES[structure.type].name} complete`, STRUCTURES[structure.type].description, 'wonder');
+    civilizationEvent(state, civ, 'MegastructureBuilt', `${civ.name}: ${STRUCTURES[structure.type].name} complete`, `${state.systems[structure.systemId].name}: ${STRUCTURES[structure.type].description}`, 'wonder');
   }
 }
 export function simulateAdvanced(state: Universe): void {
   if (Math.round(state.time) % ADVANCED_BALANCE.diplomacyInterval !== 0) return;
   const civilizations = Object.values(state.civilizations).filter(c => c.status === 'active' && c.technologies.includes('spaceflight'));
   let relationCount = Object.keys(state.relations).length;
-  for (const civ of civilizations) for (const type of Object.keys(STRUCTURES) as StructureType[]) {
-    if (civ.industry >= STRUCTURES[type].industry && civ.technologies.includes(STRUCTURES[type].requires) && !state.megastructures[`${civ.id}:${type}`]) { buildStructure(state, civ.id, type, false); break; }
+  for (const civ of civilizations) {
+    const sites = new Map<string, string>();
+    for (const id of new Set([civ.planetId, ...civ.colonies])) if (!sites.has(state.objects[id].systemId)) sites.set(state.objects[id].systemId, id);
+    construction: for (const worldId of sites.values()) for (const type of Object.keys(STRUCTURES) as StructureType[]) {
+      if (civ.industry >= STRUCTURES[type].industry && civ.technologies.includes(STRUCTURES[type].requires) && buildStructure(state, civ.id, type, false, worldId).ok) break construction;
+    }
   }
   for (let i = 0; i < civilizations.length; i++) for (let j = i + 1; j < civilizations.length; j++) {
     const a = civilizations[i], b = civilizations[j];

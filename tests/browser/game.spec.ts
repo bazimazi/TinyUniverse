@@ -90,6 +90,29 @@ test('stellar warnings offer fusion suppression and protection survives reload a
   expect(saved.events.filter((e: { type: string }) => e.type === 'StellarFlareImpact')).toHaveLength(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('colony construction uses its star, explains unsuitable projects and completes offline', async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(12, timestamp), system = generateSystem(state, 0);
+  const colony = state.objects[state.objects[system.starId].children.find(id => state.objects[id].planet)!], star = state.objects[system.starId];
+  system.name = 'Distant forge'; colony.name = 'Forge colony'; star.type = 'black-hole'; star.stellar!.stage = 'remnant'; star.stellar!.luminosity = 0.025;
+  const civ = foundCivilization(state, 'planet-0'); civ.technologies = ['spaceflight', 'interstellar', 'dyson', 'spacetime']; civ.colonies.push(colony.id);
+  state.selectedId = colony.id; state.resources.minerals = state.resources.exotic = state.resources.matter = state.resources.knowledge = 100000;
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, save); }, { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await page.clock.pauseAt(new Date(timestamp + 1000)); await page.getByRole('button', { name: 'Life', exact: true }).click();
+  await expect(page.locator('#panel')).toContainText('the selected settled world’s system');
+  const dyson = page.locator('[data-structure="dyson"]'), collector = page.locator('[data-structure="black-hole-generator"]');
+  await expect(dyson).toContainText('A Dyson swarm needs a luminous star'); await expect(dyson.getByRole('button')).toBeDisabled();
+  await collector.getByRole('button').click(); await expect(collector).toContainText('Building');
+  await collector.screenshot({ path: `artifacts/phase-21-construction-${test.info().project.name}.png` });
+  await page.reload(); await page.getByRole('button', { name: 'Life', exact: true }).click(); await expect(collector).toContainText('Building');
+  await page.clock.fastForward(1200000); await expect(collector).toContainText('Complete');
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  const structure = Object.values(saved.megastructures).find((s: any) => s.type === 'black-hole-generator') as any;
+  expect(structure.systemId).toBe(system.id); expect(structure.status).toBe('complete'); expect(saved.resources.exotic).toBeGreaterThan(99500);
+  await page.getByRole('button', { name: 'Visit home world', exact: true }).click(); await expect(collector).toContainText('needs a black hole'); await expect(collector.getByRole('button')).toBeDisabled();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
 test('atlas, codex, rename and rebirth remain usable in portrait and desktop', async ({ page }) => {
   const state = createUniverse(12, Date.now()); generateSystem(state, 0); discoverGalaxy(state, 1);
   state.totalUpgrades = 12; state.objects['planet-0'].planet!.habitability = 0.8; state.exploration.completed.orbital = 3;
