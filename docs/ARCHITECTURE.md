@@ -7,14 +7,14 @@ Tiny Universe is a static mobile browser game with no production JavaScript depe
 | `core` | Serializable models, seeded RNG, generation defaults, configuration, tiers and invariants |
 | `simulation` | Economy, orbital calculations, ecology, civilization, stars, diplomacy, construction and aggregate populations |
 | `gameplay` | Validated player actions, exploration jobs, abilities, investigations, automation and rebirth |
-| `persistence` | Checksummed save envelopes, migrations 1–12, primary/backup saves and storage failures |
+| `persistence` | Checksummed save envelopes, migrations 1–13, primary/backup saves and storage failures |
 | `rendering` | Camera scales, bounded canvas draws, hit testing and reduced motion |
 | `ui` | Contextual panels, formatting, accessible controls and progressively unlocked navigation |
 | `audio` | Optional locally synthesized ambience and discovery tones |
 
 ## Simulation and time
 
-Production integrates analytically between boundaries. Live play and offline catch-up use the same engine. Exploration, investigations, construction and warned flares split time at their exact deadlines. Decision boundaries occur every 30 seconds; neighboring worlds update at 120-second intervals and distant worlds at 600-second intervals. Population and ecological changes use analytical curves, rather than simulating individual organisms or people. Changing the focus can change the approximation tier; identical seeds, actions, focus and elapsed simulation time remain deterministic.
+Production integrates analytically between boundaries. Live play and offline catch-up use the same engine. Exploration, investigations, construction, warned flares and debris impacts split time at their exact deadlines. Decision boundaries occur every 30 seconds; neighboring worlds update at 120-second intervals and distant worlds at 600-second intervals. Population and ecological changes use analytical curves, rather than simulating individual organisms or people. Changing the focus can change the approximation tier; identical seeds, actions, focus and elapsed simulation time remain deterministic.
 
 Evolution and research estimates share rate functions with the engine. They describe current conditions in universe time, rather than promising a fixed completion date. The 32-seed active-care playthrough checks opening milestones and interstellar access; its policy and results are recorded separately from human playtesting.
 
@@ -35,6 +35,10 @@ Catch-up validates input and output state and checks worker credit against the e
 ## Scale and persistence
 
 Schema 12 saves each star’s activity clock, pending flare deadline and suppression expiry. Versions 1–11 initialize activity at the saved simulation time, preserving previous climate, shelters, technology and automation. New systems initialize their clock at discovery. Every 900 seconds, seeded checks may warn of a flare arriving 90 seconds later. Red dwarfs, blue stars and giants are more active; the unstable-stars modifier doubles the chance. Remnants stop activity. Atmosphere and magnetic fields soften heat, atmosphere loss and ecosystem damage; planetary shields or stellar suppression prevent damage. Suppression never changes stellar aging. Witnessed and suppressed flares create separate deduplicated Codex records.
+
+Schema 13 adds an asteroid activity clock, trajectory status, threatened world and exact impact deadline. Versions 1–12 initialize quiet asteroid state at the saved simulation time, preserving existing mining and orbital captures. New asteroid discoveries start their activity clock on discovery. Every 900 seconds, an unsecured orbiting asteroid has an 8% seeded chance of warning about debris reaching a planet in its system 120 seconds later. Captured companions, secured trajectories and spent showers cannot schedule another threat.
+
+Debris impacts warm their target, reduce atmosphere and water, and disrupt its food web. Shared population and stability losses scale with the world’s share of the civilization’s settlement capacity, including completed habitats. Severe losses can collapse a civilization and create its recoverable archive. Spaceflight deflection and orbital capture clear the warning; planetary shelter must extend beyond the deadline to intercept it. Each shower resolves once, retaining the asteroid, orbital links and mining income. Successful protection and witnessed impacts add distinct Codex entries and affected civilization histories. Import checks reject missing activity state, incompatible statuses, invalid targets, cross-system trajectories and impossible deadlines. The engine scans stellar and asteroid deadlines together without separate temporary arrays.
 
 Civilization context prefers an active owner over a world’s historical record. Colonies share gifts, inspiration and their civilization’s recovery timer. Construction can target home or settled colony systems; remote sites require that civilization’s own Interstellar travel research. UI, manual actions and autonomous construction share readiness checks. Structure lookup uses civilization, type and system, preserving legacy IDs and preventing duplicates at another colony in the same system. Civilizations start at most one autonomous project per diplomacy update, checking their home system before colonies. Mediation applies trust/status changes immediately, retains both histories and refuses archived or fully trusted agreements. Diplomacy skips participants that collapsed earlier in the same update.
 

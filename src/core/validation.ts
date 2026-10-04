@@ -1,4 +1,4 @@
-import { BALANCE, DISCOVERY_BALANCE, SAVE_VERSION, STELLAR_BALANCE } from './config.ts';
+import { ASTEROID_BALANCE, BALANCE, DISCOVERY_BALANCE, SAVE_VERSION, STELLAR_BALANCE } from './config.ts';
 import { TECHNOLOGIES } from './technology.ts';
 import type { GameEvent, Universe } from './types.ts';
 import { ANOMALY_KINDS } from './types.ts';
@@ -32,6 +32,12 @@ export function validateDetails(state: Universe): void {
     } else check(object.type !== 'planet', 'missing planet environment');
     if (object.stellar) check(['red-dwarf', 'yellow', 'blue'].includes(object.stellar.class) && ['main-sequence', 'giant', 'remnant'].includes(object.stellar.stage) && finite(object.stellar.fuel, 0, 1) && finite(object.stellar.lifespan, 1) && finite(object.stellar.solarMass, 0.01) && finite(object.stellar.luminosity, 0.001) && finite(object.stellar.spin, 0, 1), 'stellar evolution');
     if (object.stellar) check(finite(object.stellar.lastActivityAt, object.createdAt, state.time) && finite(object.stellar.suppressedUntil) && (object.stellar.flareAt === null || object.stellar.stage !== 'remnant' && finite(object.stellar.flareAt, state.time, state.time + STELLAR_BALANCE.flareWarning)), 'stellar activity');
+    const asteroid = object.asteroid;
+    check(object.type === 'asteroid' ? record(asteroid) : asteroid === null, 'asteroid state');
+    if (asteroid) {
+      check(['orbiting', 'incoming', 'deflected', 'spent'].includes(asteroid.status) && finite(asteroid.lastActivityAt, object.createdAt, state.time), 'asteroid activity');
+      check(asteroid.status === 'incoming' ? asteroid.targetId !== null && Object.hasOwn(state.objects, asteroid.targetId) && !!state.objects[asteroid.targetId].planet && state.objects[asteroid.targetId].systemId === object.systemId && !(object.parentId && state.objects[object.parentId].planet) && finite(asteroid.impactAt, state.time, state.time + ASTEROID_BALANCE.impactWarning) : asteroid.targetId === null && asteroid.impactAt === null, 'asteroid trajectory');
+    }
   }
   check(record(state.exploration.completed) && ['orbital', 'interstellar', 'galactic'].every(key => Number.isInteger(state.exploration.completed[key as keyof typeof state.exploration.completed]) && finite(state.exploration.completed[key as keyof typeof state.exploration.completed])), 'exploration totals');
   for (const [id, civ] of Object.entries(state.civilizations)) {

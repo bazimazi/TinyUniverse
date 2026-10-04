@@ -19,6 +19,7 @@ for (let version = 1; version < SAVE_VERSION; version++) test(`save version ${ve
   if (version < 4) { delete state.civilizations; delete state.resources.knowledge; }
   if (version < 2) delete state.exploration;
   for (const object of Object.values(state.objects) as Record<string, unknown>[]) {
+    if (version < 13) delete object.asteroid;
     if (object.stellar && version < 12) for (const key of ['lastActivityAt', 'flareAt', 'suppressedUntil']) delete (object.stellar as Record<string, unknown>)[key];
     if (version < 7) delete object.lastLifeUpdate;
     if (version < 6) { delete object.systemId; delete object.stellar; }

@@ -11,6 +11,7 @@ import { simulateDiscoveries } from './discoveries.ts';
 import { offlineCap } from '../core/meta.ts';
 import { automate } from '../gameplay/automation.ts';
 import type { Universe } from '../core/types.ts';
+import { completeImpacts, simulateAsteroids } from './asteroids.ts';
 export function advance(state: Universe, seconds: number): void {
   if (!Number.isFinite(seconds) || seconds < 0) throw new Error('Elapsed time must be finite and nonnegative.');
   if (seconds > 604800 || !Number.isFinite(state.time + seconds)) throw new Error('Advance at most seven days in one simulation call.');
@@ -19,18 +20,21 @@ export function advance(state: Universe, seconds: number): void {
     const decision = (Math.floor(state.time / BALANCE.decisionInterval) + 1) * BALANCE.decisionInterval;
     const anomalyDeadline = Math.min(end, ...Object.values(state.anomalies).map(a => a.nextAt ?? end));
     const constructionDeadline = Math.min(end, ...Object.values(state.megastructures).filter(s => s.status === 'building').map(s => Math.max(state.time, s.endsAt)));
-    const flareDeadline = Math.min(end, ...Object.values(state.objects).map(o => o.stellar?.flareAt ?? end));
-    const boundary = Math.min(end, state.exploration.job?.endsAt ?? end, decision, anomalyDeadline, constructionDeadline, flareDeadline);
+    let hazardDeadline = end;
+    for (const object of Object.values(state.objects)) hazardDeadline = Math.min(hazardDeadline, object.stellar?.flareAt ?? end, object.asteroid?.impactAt ?? end);
+    const boundary = Math.min(end, state.exploration.job?.endsAt ?? end, decision, anomalyDeadline, constructionDeadline, hazardDeadline);
     const step = Math.max(0, boundary - state.time);
     produce(state, step); state.time = boundary;
     completeExploration(state);
     advanceAnomalies(state);
     completeStructures(state);
     completeFlares(state);
+    completeImpacts(state);
     if (Math.abs(boundary - decision) < 1e-7) {
       simulateStars(state);
       simulateLife(state);
       simulateCivilizations(state);
+      simulateAsteroids(state);
       simulateGalaxies(state);
       simulateAdvanced(state);
       simulateDiscoveries(state);

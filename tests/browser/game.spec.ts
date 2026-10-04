@@ -12,6 +12,39 @@ import { simulateDiscoveries } from '../../src/simulation/discoveries.ts';
 import { collapse } from '../../src/simulation/civilizations.ts';
 import { SAVE_VERSION } from '../../src/core/config.ts';
 import type { Megastructure } from '../../src/core/types.ts';
+for (const response of ['deflect', 'shelter'] as const) test(`asteroid warnings navigate to ${response} controls and prevent offline impacts after reload`, async ({ page }) => {
+  const timestamp = Date.now(), state = createUniverse(12, timestamp), system = generateSystem(state, 0);
+  const civ = foundCivilization(state, 'planet-0'); civ.technologies = ['spaceflight']; civ.science = 0;
+  const asteroid = makeObject(state.seed, 'incoming-asteroid', 'asteroid', 'star-0'); asteroid.name = 'Bright shard';
+  asteroid.asteroid = { status: 'incoming', lastActivityAt: 0, targetId: 'planet-0', impactAt: 90 };
+  state.objects[asteroid.id] = asteroid; state.objects['star-0'].children.push(asteroid.id); state.totalUpgrades = 2; state.selectedId = system.starId;
+  state.resources.energy = state.resources.minerals = 10000;
+  const errors: string[] = []; page.on('pageerror', error => errors.push(error.message));
+  await page.clock.install({ time: new Date(timestamp) });
+  await page.addInitScript(({ key, save }) => { if (!localStorage.getItem(key)) localStorage.setItem(key, save); }, { key: SAVE_KEY, save: serialize(state) });
+  await page.goto('/'); await page.clock.pauseAt(new Date(timestamp + 1000)); await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  const warning = page.locator('[data-asteroid-threat]'); await expect(warning).toContainText('Threatens Aurelia'); await expect(warning).toContainText('Shelter does not cover');
+  await warning.screenshot({ path: `artifacts/phase-24-warning-${response}-${test.info().project.name}.png` });
+  if (response === 'deflect') {
+    await warning.getByRole('button', { name: 'Asteroid influence', exact: true }).click();
+    await expect(page.locator('[data-ability]').first()).toHaveAttribute('data-ability', 'deflect');
+    const deflect = page.locator('[data-ability="deflect"]'); await deflect.screenshot({ path: `artifacts/phase-24-deflect-${test.info().project.name}.png` });
+    await deflect.getByRole('button').click(); await expect(page.locator('[data-asteroid-status]')).toContainText('Trajectory secured'); await expect(deflect.getByRole('button')).toBeDisabled();
+  } else {
+    await warning.getByRole('button', { name: 'Shelter threatened world', exact: true }).click(); await page.locator('[data-ability="protect"]').getByRole('button').click();
+    await expect(warning).toContainText('Planetary shelter covers its arrival');
+  }
+  await page.reload();
+  if (response === 'shelter') await expect(warning).toContainText('Planetary shelter covers its arrival');
+  else await expect(page.locator('[data-asteroid-status]')).toContainText('Trajectory secured');
+  await page.clock.fastForward(90000); await expect(page.getByRole('heading', { name: 'While you were away', exact: true })).toBeVisible();
+  const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
+  expect(saved.version).toBe(SAVE_VERSION); expect(saved.objects[asteroid.id].asteroid.status).toBe('deflected'); expect(saved.objects[asteroid.id].asteroid.impactAt).toBeNull();
+  expect(saved.events.filter((e: { type: string }) => e.type === 'AsteroidImpact')).toHaveLength(0); expect(saved.events.filter((e: { type: string }) => e.type === 'AsteroidAverted')).toHaveLength(1);
+  expect(saved.discoveries['cosmic:asteroid-averted']).toBeDefined(); expect(saved.civilizations[civ.id].status).toBe('active');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true); expect(errors).toEqual([]);
+});
+
 for (const choice of ['preserve', 'decode'] as const) test(`ruins offer ${choice} rewards, finish offline and retain the fallen history after reload`, async ({ page }) => {
   const timestamp = Date.now(), state = createUniverse(45, timestamp), civ = foundCivilization(state, 'planet-0');
   civ.name = 'Tidekeepers'; civ.technologies = ['writing']; collapse(state, civ, 'Their environment changed.');

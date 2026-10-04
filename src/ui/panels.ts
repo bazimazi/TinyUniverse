@@ -14,6 +14,7 @@ import { affordabilityEstimate, lifeProgress } from './progress.ts';
 import { journalPanel } from './journal.ts';
 import { prestigePanel } from './prestige.ts';
 import { stellarActivityPanel } from './stellar.ts';
+import { asteroidActivityPanel } from './asteroids.ts';
 export type Panel = 'develop' | 'explore' | 'civilizations' | 'research' | 'influence' | 'atlas' | 'discoveries' | 'prestige' | 'events' | 'settings';
 export const PANEL_LABELS: Record<Panel, string> = { develop: 'Develop', explore: 'Explore', civilizations: 'Life', research: 'Research', influence: 'Influence', atlas: 'Atlas', discoveries: 'Discoveries', prestige: 'Rebirth', events: 'Journal', settings: 'Settings' };
 export function button(label: string, action: string, value = '', disabled = false, secondary = false): string {
@@ -31,9 +32,9 @@ export function panelContent(state: Universe, panel: Panel): string {
   if (panel === 'explore') return explorationPanel(state);
   if (panel === 'develop') {
     const production = rates(state);
-    if (!object.planet) return `<h2>${escape(object.name)}</h2><p>${object.type.replace('-', ' ')} · ${object.stellar ? `${object.stellar.class}, ${object.stellar.stage}. Fuel remaining ${Math.round(object.stellar.fuel * 100)}%. Luminosity ${object.stellar.luminosity.toFixed(2)} solar units.` : 'A small piece of your universe.'}</p>${stellarActivityPanel(state)}<p>Select a planet to develop its environment.</p>`;
+    if (!object.planet) return `<h2>${escape(object.name)}</h2><p>${object.type.replace('-', ' ')} · ${object.stellar ? `${object.stellar.class}, ${object.stellar.stage}. Fuel remaining ${Math.round(object.stellar.fuel * 100)}%. Luminosity ${object.stellar.luminosity.toFixed(2)} solar units.` : 'A small piece of your universe.'}</p>${stellarActivityPanel(state)}${asteroidActivityPanel(state)}<p>Select a planet to develop its environment.</p>`;
     return `<div class="eyebrow">YOUR FIRST WORLD</div><h2>${escape(object.name)}</h2><p class="muted">Small beginnings. Endless possibilities.</p>
-      ${stellarActivityPanel(state)}<div class="metrics">${metric('Habitability', `${Math.round(object.planet.habitability * 100)}%`)}${metric('Water coverage', `${Math.round(object.planet.water * 100)}%`)}${metric('Atmosphere', `${Math.round(object.planet.atmosphere * 100)}%`)}${metric('Age', duration(state.time - object.createdAt))}</div>
+      ${stellarActivityPanel(state)}${asteroidActivityPanel(state)}<div class="metrics">${metric('Habitability', `${Math.round(object.planet.habitability * 100)}%`)}${metric('Water coverage', `${Math.round(object.planet.water * 100)}%`)}${metric('Atmosphere', `${Math.round(object.planet.atmosphere * 100)}%`)}${metric('Age', duration(state.time - object.createdAt))}</div>
       <article class="card"><div class="card-title"><strong>${object.life?.stage === 'chemistry' ? 'The chemistry of possibility' : object.life?.stage === 'simple' ? 'A primitive ecosystem' : object.life?.stage === 'complex' ? 'An explosion of life' : 'Intelligent life'}</strong><span class="badge">${object.life?.species ?? 0} species</span></div><p>Biodiversity ${Math.round(object.planet.biodiversity * 100)}% · ${Math.round(object.planet.temperature - 273.15)}°C</p>${lifeProgress(state, object)}${object.life ? `<div class="ecosystem">${Object.entries(object.life.populations).map(([key, value]) => `<div><span>${key}</span><meter aria-label="${key} abundance" min="0" max="1" value="${value}"></meter></div>`).join('')}</div>` : ''}</article>
       <h3>Give your world a little care</h3><div class="cards">${(Object.keys(UPGRADES) as UpgradeId[]).map(id => {
         const upgrade = UPGRADES[id], cost = upgradeCost(object, id), level = object.upgrades[id];

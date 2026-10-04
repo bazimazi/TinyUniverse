@@ -5,6 +5,7 @@ import { logEvent } from '../core/universe.ts';
 import { canAfford, spend } from '../simulation/economy.ts';
 import { habitability } from '../simulation/life.ts';
 import { hasTechnology, civilizationAt, civilizationEvent } from '../simulation/civilizations.ts';
+import { avertAsteroid } from '../simulation/asteroids.ts';
 export const ABILITIES: Record<string, { name: string; description: string; cost: Cost; cooldown: number; requires: string | null; target: 'planet' | 'civilization' | 'asteroid' | 'star' }> = {
   terraform: { name: 'Gentle terraforming', description: 'Warm or cool toward 288K. Improve water and atmosphere.', cost: { energy: 250, matter: 100 }, cooldown: 90, requires: null, target: 'planet' },
   fertility: { name: 'Seed biodiversity', description: 'Introduce resilient organisms and accelerate evolution.', cost: { biology: 80, matter: 60 }, cooldown: 120, requires: null, target: 'planet' },
@@ -16,6 +17,7 @@ export const ABILITIES: Record<string, { name: string; description: string; cost
   gravityUp: { name: 'Gravity boost', description: 'Increase gravity and shorten orbital periods.', cost: { energy: 1000, knowledge: 80 }, cooldown: 120, requires: 'gravity', target: 'planet' },
   gravityDown: { name: 'Gravity reduction', description: 'Reduce gravity; orbital periods become longer.', cost: { energy: 1000, knowledge: 80 }, cooldown: 120, requires: 'gravity', target: 'planet' },
   capture: { name: 'Orbital capture', description: 'Capture an asteroid as a companion to a planet in its system.', cost: { energy: 1200, matter: 400 }, cooldown: 180, requires: 'gravity', target: 'asteroid' },
+  deflect: { name: 'Deflect debris', description: 'Redirect an incoming debris shower and permanently secure this asteroid’s trajectory.', cost: { energy: 800, minerals: 150 }, cooldown: 180, requires: 'spaceflight', target: 'asteroid' },
   suppress: { name: 'Suppress flare', description: 'Calm stellar activity for ten minutes, protecting every world in this system from flares.', cost: { energy: 1200, knowledge: 60 }, cooldown: 300, requires: 'fusion', target: 'star' }
 };
 export function orbitAfterInfluence(object: CelestialObject, id: 'push' | 'pull'): { radius: number; period: number; temperature: number } | null {
@@ -57,6 +59,7 @@ export function abilityReadiness(state: Universe, id: string, targetId: string):
     if (object.parentId && state.objects[object.parentId].planet) return fail('opportunity', 'This asteroid is already a planetary companion.');
     if (!Object.values(state.objects).some(o => o.systemId === object.systemId && o.planet)) return fail('target', 'A planet in this system is needed for capture.');
   }
+  if (id === 'deflect' && (object.asteroid?.status !== 'incoming' || object.asteroid.impactAt === null || object.asteroid.impactAt <= state.time)) return fail('opportunity', 'Only an incoming debris threat can be deflected.');
   const cooldown = cooldownFor(state, id, targetId, civ);
   if (cooldown > 0) return fail('cooldown', 'This influence is still recovering.', cooldown);
   if (!canAfford(state, ability.cost)) return fail('resources', 'Gather the resources for this influence.');
@@ -85,6 +88,11 @@ export function useAbility(state: Universe, id: string, targetId: string): Actio
     const parent = object.parentId ? state.objects[object.parentId] : null; if (parent) parent.children = parent.children.filter(child => child !== targetId);
     object.parentId = captureHome; state.objects[captureHome].children.push(targetId); object.systemId = state.objects[captureHome].systemId;
     object.orbit = { radius: 42, period: 32, eccentricity: 0.02, phase: 0 };
+    avertAsteroid(state, object, `Orbital capture secured ${object.name} as a companion before its debris reached the threatened world.`);
+  }
+  if (id === 'deflect') {
+    if (object.orbit) object.orbit.eccentricity = Math.min(0.95, object.orbit.eccentricity + 0.1);
+    avertAsteroid(state, object, `Spaceflight deflection redirected the debris from ${object.name} before it reached the threatened world.`);
   }
   if (object.planet) object.planet.habitability = habitability(object, state);
   if (civ) civilizationEvent(state, civ, 'Intervention', `${civ.name}: ${ability.name}`, `${object.name}: ${ability.description}`);

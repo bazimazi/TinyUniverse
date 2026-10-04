@@ -65,6 +65,7 @@ export function completeExploration(state: Universe): void {
   object.lastLifeUpdate = state.time;
   const rng = random(entitySeed(state.seed, id));
   object.createdAt = state.time;
+  if (object.asteroid) object.asteroid.lastActivityAt = state.time;
   object.radius = type === 'moon' ? 7 : type === 'asteroid' ? 4 : 15 + rng() * 7;
   object.mass = type === 'moon' ? 0.02 + rng() * 0.05 : type === 'asteroid' ? 0.001 : 0.6 + rng();
   object.color = type === 'moon' ? '#c8cfdf' : type === 'asteroid' ? '#bcb098' : ['#dda383', '#8aaee7', '#b0cf89'][job.index % 3];

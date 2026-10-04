@@ -16,12 +16,17 @@ test('cached production worker recovers a fallen archive and retains its artifac
   const civ = foundCivilization(imported, 'planet-0'); civ.name = 'Tidekeepers'; collapse(imported, civ, 'A lost history.');
   imported.resources.energy = imported.resources.knowledge = 10000; const id = ruinsId(imported, civ);
   investigate(imported, id); advance(imported, 60); investigate(imported, id, 'decode');
+  const asteroid = makeObject(imported.seed, 'worker-impact', 'asteroid', 'star-0'); asteroid.createdAt = imported.time;
+  asteroid.asteroid = { status: 'incoming', lastActivityAt: imported.time, targetId: 'planet-0', impactAt: imported.time + 45 };
+  imported.objects[asteroid.id] = asteroid; imported.objects['star-0'].children.push(asteroid.id);
   let workers = 0; page.on('worker', () => workers++); page.once('dialog', dialog => dialog.accept());
   await page.locator('#import-file').setInputFiles({ name: 'universe.json', mimeType: 'application/json', buffer: Buffer.from(serialize(imported)) });
   await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible(); expect(workers).toBe(1);
   const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
   expect(saved.anomalies[id].status).toBe('resolved'); expect(saved.artifacts).toContain(`star-map:${imported.anomalies[id].seed}`);
   expect(saved.civilizations[civ.id].status).toBe('extinct'); expect(saved.civilizations[civ.id].population).toBe(0); expect(saved.resources.exotic).toBeGreaterThanOrEqual(60);
+  expect(saved.objects[asteroid.id].asteroid.status).toBe('spent'); expect(saved.discoveries['cosmic:asteroid-impact']).toBeDefined();
+  expect(saved.discoveries['cosmic:asteroid-impact'].time).toBe(105);
   await page.getByRole('button', { name: 'Life', exact: true }).click(); await page.getByRole('button', { name: 'Explore their legacy', exact: true }).first().click();
   await expect(page.locator('[data-anomaly]').filter({ hasText: 'Ruins of Tidekeepers' })).toContainText('You chose to decode');
   await page.reload(); await page.getByRole('button', { name: 'Discoveries', exact: true }).click();
@@ -61,6 +66,9 @@ test('cached production returns recover when workers are unavailable offline', a
   await context.setOffline(true); await page.reload(); await page.getByRole('button', { name: 'Settings', exact: true }).first().click();
   const imported = createUniverse(88, Date.now() - 3600000); for (let i = 0; i < 9; i++) generateSystem(imported, i);
   imported.objects['star-0'].stellar!.flareAt = 45;
+  const asteroid = makeObject(imported.seed, 'fallback-impact', 'asteroid', 'star-0');
+  asteroid.asteroid = { status: 'incoming', lastActivityAt: 0, targetId: 'planet-0', impactAt: 11.5 };
+  imported.objects[asteroid.id] = asteroid; imported.objects['star-0'].children.push(asteroid.id);
   page.once('dialog', dialog => dialog.accept());
   await page.locator('#import-file').setInputFiles({ name: 'universe.json', mimeType: 'application/json', buffer: Buffer.from(serialize(imported)) });
   await expect(page.getByRole('heading', { name: 'While you were away' })).toBeVisible(); await expect(page.locator('#age')).toContainText('1.0h');
@@ -68,4 +76,6 @@ test('cached production returns recover when workers are unavailable offline', a
   const saved = await page.evaluate(key => JSON.parse(JSON.parse(localStorage.getItem(key)!).payload), SAVE_KEY);
   expect(saved.seed).toBe(88); expect(saved.time).toBeGreaterThanOrEqual(3600); expect(errors).toEqual([]);
   expect(saved.discoveries['cosmic:stellar-flare']).toBeDefined(); expect(saved.objects['star-0'].stellar.lastActivityAt).toBe(3600);
+  expect(saved.objects[asteroid.id].asteroid.status).toBe('spent'); expect(saved.discoveries['cosmic:asteroid-impact']).toBeDefined();
+  expect(saved.discoveries['cosmic:asteroid-impact'].time).toBe(11.5);
 });

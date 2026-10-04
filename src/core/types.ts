@@ -19,8 +19,9 @@ export interface CelestialObject {
   createdAt: number; parentId: string | null; children: string[]; orbit: Orbit | null;
   color: string; upgrades: Record<UpgradeId, number>; planet: PlanetProperties | null;
   favorite: boolean; mined: boolean; deposit: number; life: Ecosystem | null; shieldUntil: number;
-  systemId: string; stellar: StellarState | null; lastLifeUpdate: number;
+  systemId: string; stellar: StellarState | null; asteroid: AsteroidState | null; lastLifeUpdate: number;
 }
+export interface AsteroidState { status: 'orbiting' | 'incoming' | 'deflected' | 'spent'; lastActivityAt: number; targetId: string | null; impactAt: number | null }
 export interface StellarState { class: 'red-dwarf' | 'yellow' | 'blue'; stage: 'main-sequence' | 'giant' | 'remnant'; solarMass: number; luminosity: number; temperature: number; lifespan: number; fuel: number; spin: number; lastActivityAt: number; flareAt: number | null; suppressedUntil: number }
 export interface StarSystem { id: string; seed: number; name: string; starId: string; position: { x: number; y: number }; galaxyId: string }
 export interface Galaxy { id: string; seed: number; name: string; totalSystems: number; surveyed: number; backgroundCivilizations: number; backgroundPopulation: number; lastUpdate: number }

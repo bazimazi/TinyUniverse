@@ -7,7 +7,8 @@ export const BALANCE = {
   life: { simpleAt: 60, complexAt: 240, intelligentAt: 540, growth: 0.006, eventChance: 0.008, minimumHabitability: 0.35 },
   civilization: { basePopulation: 1000, growth: 0.0008, capacity: 1e7, research: 1.5, collapseDelay: 180, maxHistory: 48, habitatCapacity: 1e6, habitatHabitability: 0.8, habitatFood: 0.8 }
 };
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 13;
+export const ASTEROID_BALANCE = { activityInterval: 900, impactWarning: 120, impactChance: 0.08, heat: 18, atmosphereLoss: 0.12, waterLoss: 0.06, ecosystemLoss: 0.3, populationLoss: 0.2, stabilityLoss: 0.08 };
 export const INFLUENCE_BALANCE = { orbitMin: 60, orbitMax: 800, orbitFactor: 1.12, gravityMin: 0.25, gravityMax: 4 };
 export const META_BALANCE = { lawBaseCost: 3, maxLaw: 20, productionPerLevel: 0.15, evolutionPerLevel: 0.1, researchPerLevel: 0.12, maxOfflineDays: 7 };
 export const DISCOVERY_BALANCE = { anomalyChance: 0.3, maxAnomalies: 64, investigation: 60, resolution: 90, rewardKnowledge: 350, rewardExotic: 60, rewardResearch: 500, archiveProgress: 180, ruinsBiology: 120, ruinsEcosystemBoost: 0.1, ruinsMinerals: 250 };

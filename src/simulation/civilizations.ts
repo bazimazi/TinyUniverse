@@ -2,7 +2,7 @@ import { BALANCE, META_BALANCE } from '../core/config.ts';
 import { TECHNOLOGIES } from '../core/technology.ts';
 import { entitySeed, nameFor, random } from '../core/random.ts';
 import { logEvent } from '../core/universe.ts';
-import type { Civilization, Domain, Universe } from '../core/types.ts';
+import type { CelestialObject, Civilization, Domain, Universe } from '../core/types.ts';
 import { updateInterval } from '../core/tiers.ts';
 import { recordRuins } from '../gameplay/discoveries.ts';
 const DOMAINS: Domain[] = ['biology', 'physics', 'energy', 'computing', 'materials', 'space', 'social', 'gravity', 'quantum'];
@@ -50,6 +50,10 @@ export function collapse(state: Universe, civ: Civilization, reason: string): vo
   recordRuins(state, civ);
 }
 export interface CivilizationEnvironment { capacity: number; habitability: number; food: number; solar: number; gravity: number; worlds: number; habitats: number }
+export function settlementCapacity(world: CelestialObject, civ: Civilization): number {
+  const p = world.planet;
+  return p ? BALANCE.civilization.capacity * p.habitability * (0.2 + civ.infrastructure) * Math.max(0.05, p.biodiversity + p.water * 0.5) : 0;
+}
 function environmentFor(state: Universe, civ: Civilization, habitats: number): CivilizationEnvironment {
   const worlds = new Set([civ.planetId, ...civ.colonies]);
   const home = state.objects[civ.planetId], homePlanet = home.planet!;
@@ -57,7 +61,7 @@ function environmentFor(state: Universe, civ: Civilization, habitats: number): C
   for (const id of worlds) {
     const world = state.objects[id];
     const p = world.planet!, food = Math.max(0.05, p.biodiversity + p.water * 0.5);
-    const capacity = BALANCE.civilization.capacity * p.habitability * (0.2 + civ.infrastructure) * food;
+    const capacity = settlementCapacity(world, civ);
     result.capacity += capacity; result.habitability += p.habitability * capacity; result.food += food * capacity;
     result.solar += world.upgrades.solar * capacity; result.gravity += p.gravity * capacity;
   }

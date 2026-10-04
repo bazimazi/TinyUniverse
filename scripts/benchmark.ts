@@ -29,5 +29,7 @@ const outposts = Object.values(automated.objects).filter(o => o.type === 'astero
 if (outposts !== 16) throw new Error('Automation did not establish every benchmark mining outpost.');
 const habitats = Object.values(automated.megastructures).filter(s => s.type === 'habitat' && s.status === 'complete').length;
 if (!habitats) throw new Error('The benchmark did not exercise completed habitat support.');
-console.log(`24h with automation: ${automatedElapsed.toFixed(2)}ms, ${Object.keys(automated.objects).length} objects, ${outposts} mining outposts, ${habitats} completed habitats, ${automated.exploration.completed.interstellar} stellar surveys`);
+const impacts = Object.values(automated.objects).filter(o => o.asteroid?.status === 'spent').length;
+if (!impacts) throw new Error('The benchmark did not resolve any asteroid debris showers.');
+console.log(`24h with automation: ${automatedElapsed.toFixed(2)}ms, ${Object.keys(automated.objects).length} objects, ${outposts} mining outposts, ${habitats} completed habitats, ${impacts} debris showers resolved, ${automated.exploration.completed.interstellar} stellar surveys`);
 if (automatedElapsed > 2000) throw new Error('Automated offline simulation exceeded the 2s budget.');

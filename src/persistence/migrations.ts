@@ -4,6 +4,7 @@ import { initialStar } from '../core/stellar.ts';
 import { entitySeed } from '../core/random.ts';
 import { initialGalaxy } from '../core/galaxy.ts';
 import { initialMeta } from '../core/meta.ts';
+import { initialAsteroid } from '../core/asteroid.ts';
 export function migrate(state: Universe): void {
   if (state.version < 2) {
     state.exploration = { job: null, completed: { orbital: 0, interstellar: 0, galactic: 0 } };
@@ -39,4 +40,5 @@ export function migrate(state: Universe): void {
   if (state.version < 12) for (const object of Object.values(state.objects)) if (object.stellar) {
     object.stellar.lastActivityAt = state.time; object.stellar.flareAt = null; object.stellar.suppressedUntil = 0;
   }
+  if (state.version < 13) for (const object of Object.values(state.objects)) object.asteroid = object.type === 'asteroid' ? initialAsteroid(state.time) : null;
 }

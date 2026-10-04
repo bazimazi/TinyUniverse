@@ -5,6 +5,7 @@ import { initialLife } from './ecosystem.ts';
 import { initialStar } from './stellar.ts';
 import { initialGalaxy } from './galaxy.ts';
 import { initialMeta } from './meta.ts';
+import { initialAsteroid } from './asteroid.ts';
 export function makeObject(seed: number, id: string, type: CelestialObject['type'], parentId: string | null): CelestialObject {
   const objectSeed = entitySeed(seed, id);
   const rng = random(objectSeed);
@@ -16,7 +17,7 @@ export function makeObject(seed: number, id: string, type: CelestialObject['type
     upgrades: { solar: 0, mining: 0, atmosphere: 0, oceans: 0, biodiversity: 0 },
     planet: type === 'planet' ? { temperature: 288, atmosphere: 0.45, water: 0.45, magneticField: 0.55, habitability: 0.52, biodiversity: 0.05, gravity: 1 } : null,
     favorite: false, mined: false, deposit: type === 'asteroid' ? 100 + rng() * 200 : 0,
-    life: type === 'planet' ? initialLife(id === 'planet-0') : null, shieldUntil: 0, systemId: 'system-0', stellar: type === 'star' ? initialStar() : null, lastLifeUpdate: 0
+    life: type === 'planet' ? initialLife(id === 'planet-0') : null, shieldUntil: 0, systemId: 'system-0', stellar: type === 'star' ? initialStar() : null, asteroid: type === 'asteroid' ? initialAsteroid() : null, lastLifeUpdate: 0
   };
 }
 export function createUniverse(seed = 1307, timestamp = Date.now()): Universe {

@@ -4,12 +4,14 @@ import { costText, duration, escape, number } from './format.ts';
 import type { Universe } from '../core/types.ts';
 import { civilizationAt } from '../simulation/civilizations.ts';
 import { stellarActivityPanel } from './stellar.ts';
+import { asteroidActivityPanel } from './asteroids.ts';
 export function influencePanel(state: Universe): string {
   const object = state.objects[state.selectedId];
   const civ = civilizationAt(state, object.id, true);
   const abilities = Object.entries(ABILITIES);
   if (object.stellar) abilities.sort(([, a], [, b]) => Number(b.target === 'star') - Number(a.target === 'star'));
-  return `<div class="eyebrow">POWERFUL, BUT INDIRECT</div><h2>A gentle hand</h2><p>Influence ${escape(object.name)}. A world and its inhabitants will respond to the conditions you create.</p>${stellarActivityPanel(state)}<div class="cards">${abilities.map(([id, ability]) => {
+  if (object.asteroid) abilities.sort(([aId, a], [bId, b]) => Number(object.asteroid!.status === 'incoming' && bId === 'deflect') - Number(object.asteroid!.status === 'incoming' && aId === 'deflect') || Number(b.target === 'asteroid') - Number(a.target === 'asteroid'));
+  return `<div class="eyebrow">POWERFUL, BUT INDIRECT</div><h2>A gentle hand</h2><p>Influence ${escape(object.name)}. A world and its inhabitants will respond to the conditions you create.</p>${stellarActivityPanel(state)}${asteroidActivityPanel(state)}<div class="cards">${abilities.map(([id, ability]) => {
     const readiness = abilityReadiness(state, id, object.id);
     const next = id === 'push' || id === 'pull' ? orbitAfterInfluence(object, id) : null;
     const preview = next ? `<p class="muted">Orbit radius ${number(object.orbit!.radius)} → ${number(next.radius)} · temperature ${number(object.planet!.temperature)}K → ${number(next.temperature)}K</p>` : ability.target === 'civilization' && civ ? `<p class="muted">Supports ${escape(civ.name)} across ${new Set([civ.planetId, ...civ.colonies]).size} settled worlds. Recovery is shared across their worlds.</p>` : '';
